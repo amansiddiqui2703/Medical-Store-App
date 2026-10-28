@@ -1,0 +1,6 @@
+{
+  "name": "RefillDesk - Medical Store Manager",
+  "description": "Smart pharmacy management: 3-day refill reminders, WhatsApp prescription order desk, expiry watchlist, distributor returns, and Udhaar credit book made by Automindz Digital Labs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
