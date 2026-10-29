@@ -27,7 +27,11 @@ export const NewStockModal: React.FC<NewStockModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !batch.trim() || !expiry || !supplier.trim() || !Number.isFinite(qty) || qty < 1 || cost < 0 || mrp < 0) return;
+    const expiryDate = new Date(expiry + 'T00:00:00');
+    if (!name.trim() || !batch.trim() || !expiry || Number.isNaN(expiryDate.getTime()) || !supplier.trim() || !Number.isFinite(qty) || qty < 1 || !Number.isInteger(qty) || !Number.isFinite(cost) || cost < 0 || !Number.isFinite(mrp) || mrp < 0) {
+      window.alert('Check the medicine name, batch, expiry date, supplier, whole-unit quantity, purchase cost and MRP.');
+      return;
+    }
 
     onSubmit({
       name: name.trim(),
