@@ -29,7 +29,7 @@ function isValidSyncConfig(value: unknown): value is SyncConfig {
   const candidate = value as Record<string, unknown>;
   if (typeof candidate.serverUrl !== 'string' || typeof candidate.token !== 'string') return false;
 
-  const serverUrl = candidate.serverUrl.trim().replace(/\\/+$/, '');
+  const serverUrl = candidate.serverUrl.trim().replace(/\/+$/, '');
   const token = candidate.token.trim();
   if (!serverUrl || token.length < 24) return false;
 
@@ -65,7 +65,7 @@ export function getSyncConfig(): SyncConfig | null {
       return null;
     }
     return {
-      serverUrl: parsed.serverUrl.trim().replace(/\\/+$/, ''),
+      serverUrl: parsed.serverUrl.trim().replace(/\/+$/, ''),
       token: parsed.token.trim(),
     };
   } catch {
