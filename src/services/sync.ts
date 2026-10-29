@@ -26,7 +26,22 @@ export function getSyncConfig(): SyncConfig | null {
 
 export function saveSyncConfig(serverUrl: string, token: string): void {
   const normalized = serverUrl.trim().replace(/\/+$/, '');
-  if (!/^https?:\/\//i.test(normalized)) throw new Error('Server URL must start with http:// or https://');
+  let parsed: URL;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    throw new Error('Enter a valid sync server URL.');
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error('Sync server URL must use HTTPS.');
+  }
+  const localHttpHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+  if (parsed.protocol === 'http:' && !localHttpHosts.has(parsed.hostname)) {
+    throw new Error('For remote devices, use an HTTPS sync URL. HTTP is allowed only for localhost testing.');
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error('Do not put credentials, query parameters, or fragments in the sync server URL.');
+  }
   if (token.trim().length < 24) throw new Error('Sync token must be at least 24 characters.');
   localStorage.setItem(CONFIG_KEY, JSON.stringify({ serverUrl: normalized, token: token.trim() }));
 }
