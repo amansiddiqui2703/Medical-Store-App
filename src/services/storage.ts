@@ -219,6 +219,10 @@ export class StorageService {
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
   }): { updatedStore: MedicalStore; newInvoice: SubscriptionInvoice } {
+    // Paid activation must wait for a verified server-side payment callback.
+    if (params.plan !== 'Trial') {
+      throw new Error('Paid subscription activation is disabled until a verified payment gateway is integrated.');
+    }
     const stores = this.getStores();
     const store = stores.find(s => s.id === params.storeId);
     if (!store) {
