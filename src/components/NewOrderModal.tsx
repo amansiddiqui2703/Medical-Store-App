@@ -39,15 +39,33 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        window.alert('Prescription file must be 5 MB or smaller.');
+      const isAllowedType = file.type === 'application/pdf' || file.type.startsWith('image/');
+      const hasAllowedExtension = /\.(pdf|png|jpe?g|webp|gif|bmp)$/i.test(file.name);
+      if (!isAllowedType && !hasAllowedExtension) {
+        window.alert('Upload a PDF or image file only.');
         e.target.value = '';
         return;
       }
-      setPrescriptionFileName(file.name);
+      // Attachments are stored inside browser localStorage in this prototype; large files can
+      // exceed the browser quota and prevent ordinary shop records from saving.
+      if (file.size > 1024 * 1024) {
+        window.alert('For reliability, prescription attachments must be 1 MB or smaller until secure file storage is connected.');
+        e.target.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
-        setPrescriptionUrl(reader.result as string);
+        if (typeof reader.result !== 'string') {
+          window.alert('Could not read this prescription file. Please try another file.');
+          e.target.value = '';
+          return;
+        }
+        setPrescriptionUrl(reader.result);
+        setPrescriptionFileName(file.name);
+      };
+      reader.onerror = () => {
+        window.alert('Could not read this prescription file. Please try again.');
+        e.target.value = '';
       };
       reader.readAsDataURL(file);
     }
@@ -224,7 +242,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
               <input
                 type="number"
                 min="0"
-                step="1"
+                step="0.01"
                 value={amount || ''}
                 onChange={e => setAmount(Number(e.target.value))}
                 placeholder="0"
