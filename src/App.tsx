@@ -525,54 +525,94 @@ export default function App() {
     showToast(`Message draft logged for ${name}. No message was sent automatically.`);
   };
 
-  // Data Export / Import / Reset
+  // Data Export / Import / Reset. Backups include every locally stored business record.
   const handleExportAllJSON = () => {
     const backup = {
-      version: '1.0.0',
+      schemaVersion: 2,
       exportedAt: new Date().toISOString(),
       store: settings,
+      stores,
+      activeStoreId,
       customers,
       stock,
       orders,
       transactions,
       returns,
       logs,
-      madeBy: 'Automindz Digital Labs',
+      invoices,
+      madeBy: 'M.S. Medical Store',
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `refilldesk_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `ms-medical-store-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    showToast('Complete store backup downloaded.');
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Backup downloaded. Keep a second copy outside this device.');
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Backup is too large (maximum 20 MB).');
+      input.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = ev => {
       try {
-        const parsed = JSON.parse(ev.target?.result as string);
-        if (parsed.customers) setCustomers(parsed.customers);
-        if (parsed.stock) setStock(parsed.stock);
-        if (parsed.orders) setOrders(parsed.orders);
-        if (parsed.transactions) setTransactions(parsed.transactions);
-        if (parsed.returns) setReturns(parsed.returns);
-        if (parsed.store) setSettings(parsed.store);
-        showToast('Store data imported successfully!');
+        const parsed: unknown = JSON.parse(String(ev.target?.result || ''));
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Backup must be a JSON object.');
+        const data = parsed as Record<string, unknown>;
+        const arrayKeys = ['customers', 'stock', 'orders', 'transactions', 'returns', 'logs', 'stores', 'invoices'] as const;
+        for (const key of arrayKeys) {
+          if (data[key] !== undefined && !Array.isArray(data[key])) {
+            throw new Error(`Invalid backup: "${key}" must be a list.`);
+          }
+        }
+        if (!Array.isArray(data.customers) || !Array.isArray(data.stock) || !Array.isArray(data.orders)) {
+          throw new Error('This backup is missing required customers, stock or orders lists.');
+        }
+        if (!window.confirm('Restore this backup? Current local records will be replaced. Export a backup of current data first.')) return;
+
+        setCustomers(data.customers as Customer[]);
+        setStock(data.stock as StockItem[]);
+        setOrders(data.orders as Order[]);
+        setTransactions(Array.isArray(data.transactions) ? data.transactions as CreditTransaction[] : []);
+        setReturns(Array.isArray(data.returns) ? data.returns as DistributorReturn[] : []);
+        setLogs(Array.isArray(data.logs) ? data.logs as MessageLog[] : []);
+        if (data.store && typeof data.store === 'object' && !Array.isArray(data.store)) setSettings({ ...StorageService.getSettings(), ...(data.store as Partial<StoreSettings>) });
+        if (Array.isArray(data.stores) && data.stores.length) {
+          setStores(data.stores as MedicalStore[]);
+          StorageService.saveStores(data.stores as MedicalStore[]);
+        }
+        if (typeof data.activeStoreId === 'string') {
+          setActiveStoreId(data.activeStoreId);
+          StorageService.setActiveStoreId(data.activeStoreId);
+        }
+        setInvoices(Array.isArray(data.invoices) ? data.invoices as SubscriptionInvoice[] : []);
+        showToast('Backup restored locally. Verify stock, balances and invoice totals before use.');
       } catch (err) {
-        alert('Invalid backup JSON file.');
+        alert(err instanceof Error ? err.message : 'Invalid backup JSON file.');
+      } finally {
+        input.value = '';
       }
+    };
+    reader.onerror = () => {
+      alert('Could not read this backup file.');
+      input.value = '';
     };
     reader.readAsText(file);
   };
 
   const handleResetData = () => {
-    if (window.confirm('Reset all store records to initial demo database? Current edits will be erased.')) {
+    if (window.confirm('Permanently clear all local store records on this device? Export a backup first. This cannot be undone.')) {
       StorageService.resetToDefaults();
       setCustomers(StorageService.getCustomers());
       setStock(StorageService.getStock());
@@ -581,7 +621,8 @@ export default function App() {
       setReturns(StorageService.getReturns());
       setLogs(StorageService.getLogs());
       setSettings(StorageService.getSettings());
-      showToast('Database reset to fresh demo state.');
+      setInvoices(StorageService.getInvoices());
+      showToast('Local records cleared on this device.');
     }
   };
 
