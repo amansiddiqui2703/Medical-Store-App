@@ -188,7 +188,7 @@ export class StorageService {
           phone: cleanPhone(customer.phone),
           name: customer.name,
           message: text,
-          status: settings.whatsappAccessToken ? 'delivered' : 'simulated',
+          status: 'simulated', // No WhatsApp API request is made by this local scan.
           triggerType: 'refill_reminder',
         });
       }
