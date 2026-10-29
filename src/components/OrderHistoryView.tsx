@@ -91,6 +91,16 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
 
   const maxWeeklyRevenue = Math.max(...weeklyBuckets.map(b => b.revenue), 1);
 
+  const handlePrintReceipt = () => {
+    const receipt = document.getElementById('sale-receipt-content');
+    if (!receipt) return;
+    const printWindow = window.open('', '_blank', 'width=720,height=800');
+    if (!printWindow) { window.alert('Please allow pop-ups to print the receipt.'); return; }
+    printWindow.document.open();
+    printWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Sale receipt</title><style>body{font:13px Arial,sans-serif;color:#111;margin:24px}table{width:100%;border-collapse:collapse}th,td{padding:7px;border-bottom:1px solid #ddd;text-align:left}button{display:none}.text-right{text-align:right}.text-center{text-align:center}.text-amber-700{color:#92400e}</style></head><body>' + receipt.innerHTML + '</body></html>');
+    printWindow.document.close();
+    printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
+  };
   // Export CSV handler
   const handleExportCSV = () => {
     const headers = [
@@ -454,7 +464,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
       {/* Order Receipt Modal */}
       {selectedReceiptOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 p-6 space-y-4 text-xs">
+          <div id="sale-receipt-content" className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 p-6 space-y-4 text-xs">
             {/* Pharmacy Receipt Header */}
             <div className="text-center border-b border-slate-200 pb-4">
               <div className="font-bold text-base text-slate-900">
@@ -517,7 +527,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
 
             <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
               <button
-                onClick={() => window.print()}
+                onClick={handlePrintReceipt}
                 className="inline-flex items-center gap-2 px-4 py-2 font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" /> Print / Save PDF
