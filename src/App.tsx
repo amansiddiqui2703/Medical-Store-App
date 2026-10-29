@@ -346,8 +346,14 @@ export default function App() {
   };
 
   const handleUpdateOrderAmount = (orderId: number, amount: number) => {
+    // Guard persisted values as well as the input control: never store NaN, Infinity,
+    // or a negative amount that could corrupt totals/reports.
+    if (!Number.isFinite(amount) || amount < 0) {
+      showToast('Bill amount must be a valid number greater than or equal to ₹0.');
+      return;
+    }
     setOrders(prev =>
-      prev.map(o => (o.id === orderId ? { ...o, amount } : o))
+      prev.map(o => (o.id === orderId ? { ...o, amount: Math.round(amount * 100) / 100 } : o))
     );
   };
 
