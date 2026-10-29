@@ -44,6 +44,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const [billingOrder, setBillingOrder] = useState<Order | null>(null);
   const [billRows, setBillRows] = useState<Array<{ stockId: number; qty: number }>>([]);
   const [billError, setBillError] = useState('');
+  const [isSubmittingBill, setIsSubmittingBill] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const sellableStock = stock.filter(item => item.qty > 0 && item.expiry >= today);
   const openBilling = (order: Order) => {
@@ -52,27 +53,32 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     setBillError('');
   };
   const submitBill = () => {
-    if (!billingOrder || billRows.length === 0) return;
-    const lines: SaleLineItem[] = [];
-    for (const row of billRows) {
-      const item = sellableStock.find(s => s.id === row.stockId);
-      if (!item || !Number.isInteger(row.qty) || row.qty < 1 || row.qty > item.qty) {
-        setBillError('Choose a valid unexpired batch and quantity within available stock.');
-        return;
+    if (isSubmittingBill || !billingOrder || billRows.length === 0) return;
+    setIsSubmittingBill(true);
+    try {
+      const lines: SaleLineItem[] = [];
+      for (const row of billRows) {
+        const item = sellableStock.find(s => s.id === row.stockId);
+        if (!item || !Number.isInteger(row.qty) || row.qty < 1 || row.qty > item.qty) {
+          setBillError('Choose a valid unexpired batch and quantity within available stock.');
+          return;
+        }
+        lines.push({ stockId: item.id, name: item.name, batch: item.batch, qty: row.qty, unitPrice: item.mrp, lineTotal: Math.round(item.mrp * row.qty * 100) / 100 });
       }
-      lines.push({ stockId: item.id, name: item.name, batch: item.batch, qty: row.qty, unitPrice: item.mrp, lineTotal: Math.round(item.mrp * row.qty * 100) / 100 });
+      const quantities = new Map<number, number>();
+      for (const line of lines) quantities.set(line.stockId, (quantities.get(line.stockId) || 0) + line.qty);
+      for (const [stockId, qty] of quantities) {
+        const item = sellableStock.find(s => s.id === stockId);
+        if (!item || qty > item.qty) { setBillError('Combined quantities exceed available stock for a selected batch.'); return; }
+      }
+      const completed = onCompleteSale(billingOrder.id, lines);
+      if (!completed) return;
+      setBillingOrder(null);
+      setBillRows([]);
+      setBillError('');
+    } finally {
+      setIsSubmittingBill(false);
     }
-    const quantities = new Map<number, number>();
-    for (const line of lines) quantities.set(line.stockId, (quantities.get(line.stockId) || 0) + line.qty);
-    for (const [stockId, qty] of quantities) {
-      const item = sellableStock.find(s => s.id === stockId);
-      if (!item || qty > item.qty) { setBillError('Combined quantities exceed available stock for a selected batch.'); return; }
-    }
-    const completed = onCompleteSale(billingOrder.id, lines);
-    if (!completed) return;
-    setBillingOrder(null);
-    setBillRows([]);
-    setBillError('');
   };
 
   const statuses: OrderStatus[] = ['Review needed', 'Quoted', 'Ready for pickup', 'Completed', 'Cancelled'];
@@ -326,7 +332,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm font-bold flex justify-between"><span>Total (MRP)</span><span>₹{billRows.reduce((sum, row) => sum + (sellableStock.find(s => s.id === row.stockId)?.mrp || 0) * (Number.isFinite(row.qty) ? row.qty : 0), 0).toFixed(2)}</span></div>
             {billError && <p role="alert" className="mt-3 text-xs text-rose-700">{billError}</p>}
             <p className="mt-2 text-[11px] text-amber-700">Confirm only after checking the prescription and exact medicines. Uses listed MRP; GST invoice compliance and discounts are not calculated here.</p>
-            <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setBillingOrder(null)} className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold">Cancel</button><button type="button" onClick={submitBill} className="rounded-lg bg-teal-700 px-4 py-2 text-xs font-semibold text-white">Confirm Bill &amp; Deduct Stock</button></div>
+            <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setBillingOrder(null)} className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold">Cancel</button><button type="button" onClick={submitBill} disabled={isSubmittingBill} className="rounded-lg bg-teal-700 px-4 py-2 text-xs font-semibold text-white">Confirm Bill &amp; Deduct Stock</button></div>
           </div>
         </div>
       )}
