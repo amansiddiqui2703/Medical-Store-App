@@ -354,7 +354,8 @@ export default function App() {
     const today = new Date().toISOString().slice(0, 10);
     const required = new Map<number, number>();
     for (const line of items) {
-      if (!Number.isInteger(line.qty) || line.qty < 1 || !Number.isFinite(line.unitPrice) || line.unitPrice < 0 || !Number.isFinite(line.lineTotal) || line.lineTotal < 0) {
+      const expectedLineTotal = Math.round(line.unitPrice * line.qty * 100) / 100;
+      if (!Number.isInteger(line.qty) || line.qty < 1 || !Number.isFinite(line.unitPrice) || line.unitPrice < 0 || !Number.isFinite(line.lineTotal) || line.lineTotal < 0 || line.lineTotal !== expectedLineTotal) {
         showToast('Invalid medicine quantity or price.'); return;
       }
       required.set(line.stockId, (required.get(line.stockId) || 0) + line.qty);
