@@ -56,9 +56,11 @@ export class StorageService {
   static getCustomers(): Customer[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      return data ? JSON.parse(data) : initialCustomers;
+      if (!data) return [];
+      const parsed: unknown = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed as Customer[] : [];
     } catch {
-      return initialCustomers;
+      return [];
     }
   }
 
@@ -69,9 +71,11 @@ export class StorageService {
   static getStock(): StockItem[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.STOCK);
-      return data ? JSON.parse(data) : initialStock;
+      if (!data) return [];
+      const parsed: unknown = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed as StockItem[] : [];
     } catch {
-      return initialStock;
+      return [];
     }
   }
 
@@ -82,18 +86,11 @@ export class StorageService {
   static getOrders(): Order[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.ORDERS);
-      if (!data) return initialOrders;
-      const parsed: Order[] = JSON.parse(data);
-      if (parsed.length < initialOrders.length) {
-        const existingIds = new Set(parsed.map(o => o.id));
-        const missing = initialOrders.filter(o => !existingIds.has(o.id));
-        const merged = [...parsed, ...missing];
-        this.saveOrders(merged);
-        return merged;
-      }
-      return parsed;
+      if (!data) return [];
+      const parsed: unknown = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed as Order[] : [];
     } catch {
-      return initialOrders;
+      return [];
     }
   }
 
@@ -104,9 +101,11 @@ export class StorageService {
   static getTransactions(): CreditTransaction[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      return data ? JSON.parse(data) : initialTransactions;
+      if (!data) return [];
+      const parsed: unknown = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed as CreditTransaction[] : [];
     } catch {
-      return initialTransactions;
+      return [];
     }
   }
 
@@ -201,9 +200,11 @@ export class StorageService {
   static getInvoices(): SubscriptionInvoice[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.INVOICES);
-      return data ? JSON.parse(data) : initialInvoices;
+      if (!data) return [];
+      const parsed: unknown = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed as SubscriptionInvoice[] : [];
     } catch {
-      return initialInvoices;
+      return [];
     }
   }
 
