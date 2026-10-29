@@ -18,7 +18,7 @@ interface OrdersViewProps {
   orders: Order[];
   stock: StockItem[];
   settings: StoreSettings;
-  onCompleteSale: (orderId: number, items: SaleLineItem[]) => void;
+  onCompleteSale: (orderId: number, items: SaleLineItem[]) => boolean;
   onOpenNewOrder: () => void;
   onViewPrescription: (order: Order) => void;
   onUpdateStatus: (orderId: number, newStatus: OrderStatus) => void;
@@ -68,7 +68,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       const item = sellableStock.find(s => s.id === stockId);
       if (!item || qty > item.qty) { setBillError('Combined quantities exceed available stock for a selected batch.'); return; }
     }
-    onCompleteSale(billingOrder.id, lines);
+    const completed = onCompleteSale(billingOrder.id, lines);
+    if (!completed) return;
     setBillingOrder(null);
     setBillRows([]);
     setBillError('');
