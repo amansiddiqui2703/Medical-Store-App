@@ -64,11 +64,23 @@ test('health endpoint exposes service status but no store data', async () => {
   const response = await fetch(`${baseUrl}/api/health`);
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true, service: 'ms-medical-store-sync', authRequired: true });
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(response.headers.get('x-frame-options'), 'DENY');
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(response.headers.get('cache-control'), 'no-store');
 });
 
 test('sync data requires a valid token', async () => {
   const response = await fetch(`${baseUrl}/api/sync`);
   assert.equal(response.status, 401);
+});
+
+test('rejects an incorrect sync token', async () => {
+  const response = await fetch(`${baseUrl}/api/sync`, {
+    headers: { 'X-Sync-Token': 'incorrect-token-that-is-long-enough-to-test' },
+  });
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).error, 'Invalid sync token.');
 });
 
 test('rejects browser origins not on the allowlist', async () => {
@@ -86,6 +98,16 @@ test('accepts a valid snapshot and increments revision', async () => {
   const body = await response.json();
   assert.equal(body.ok, true);
   assert.equal(body.revision, 1);
+});
+
+test('rejects malformed JSON with a controlled client error', async () => {
+  const response = await fetch(`${baseUrl}/api/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Sync-Token': TOKEN },
+    body: '{"expectedRevision":',
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, 'Invalid JSON request.');
 });
 
 test('rejects stale revisions instead of overwriting newer data', async () => {
