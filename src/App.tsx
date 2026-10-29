@@ -384,6 +384,10 @@ export default function App() {
   const handleUpdateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
     const order = orders.find(item => item.id === orderId);
     if (!order) return;
+    if (order.status === 'Completed') {
+      showToast('Completed sales are locked to preserve inventory and history.');
+      return;
+    }
     // Completion is only allowed through the validated bill flow.
     if (newStatus === 'Completed') {
       showToast('Use Create Bill to complete the order and deduct stock safely.');
