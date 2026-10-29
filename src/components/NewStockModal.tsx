@@ -16,7 +16,7 @@ export const NewStockModal: React.FC<NewStockModalProps> = ({
   const [name, setName] = useState('');
   const [strength, setStrength] = useState('');
   const [batch, setBatch] = useState('');
-  const [qty, setQty] = useState<number>(100);
+  const [qty, setQty] = useState<number>(1);
   const [expiry, setExpiry] = useState('');
   const [supplier, setSupplier] = useState('');
   const [cost, setCost] = useState<number>(0);
@@ -27,13 +27,13 @@ export const NewStockModal: React.FC<NewStockModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !batch || !expiry || !supplier) return;
+    if (!name.trim() || !batch.trim() || !expiry || !supplier.trim() || !Number.isFinite(qty) || qty < 1 || cost < 0 || mrp < 0) return;
 
     onSubmit({
       name: name.trim(),
       strength: strength.trim(),
       batch: batch.trim().toUpperCase(),
-      qty: Number(qty) || 1,
+      qty: Math.floor(Number(qty)),
       expiry,
       supplier: supplier.trim(),
       cost: Number(cost) || 0,
