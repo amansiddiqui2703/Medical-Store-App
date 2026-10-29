@@ -13,6 +13,17 @@ export type SyncResult =
 type SyncConfig = { serverUrl: string; token: string };
 type ServerSnapshot = { revision: number; snapshot: Record<string, string>; updatedAt: string | null };
 
+function isServerSnapshot(value: unknown): value is ServerSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  if (!Number.isInteger(candidate.revision) || (candidate.revision as number) < 0) return false;
+  if (!candidate.snapshot || typeof candidate.snapshot !== 'object' || Array.isArray(candidate.snapshot)) return false;
+  if (candidate.updatedAt !== null && typeof candidate.updatedAt !== 'string') return false;
+  return Object.entries(candidate.snapshot as Record<string, unknown>).every(
+    ([key, item]) => key.startsWith(PREFIX) && typeof item === 'string',
+  );
+}
+
 export function getSyncConfig(): SyncConfig | null {
   try {
     const raw = localStorage.getItem(CONFIG_KEY);
@@ -88,10 +99,17 @@ export async function syncNow(): Promise<SyncResult> {
 
   let remote: ServerSnapshot;
   try {
-    remote = await request<ServerSnapshot>(config, '/api/sync');
+    const response = await request<unknown>(config, '/api/sync');
+    if (!isServerSnapshot(response)) {
+      return { status: 'conflict', message: 'The sync server returned invalid data. No local data was changed; export a backup before troubleshooting.' };
+    }
+    remote = response;
   } catch (error) {
     if (error instanceof Error && error.message === 'SYNC_CONFLICT') {
       return { status: 'conflict', message: 'Another device updated the server. No data was overwritten.' };
+    }
+    if (error instanceof Error && /Invalid sync token/i.test(error.message)) {
+      return { status: 'setup', message: 'The sync token was rejected. Check the token on the Windows PC and reconnect.' };
     }
     return { status: 'offline', message: 'Sync server is unreachable. Your local data is still saved on this device.' };
   }
@@ -99,8 +117,23 @@ export async function syncNow(): Promise<SyncResult> {
   const local = getLocalSnapshot();
   const baseRaw = localStorage.getItem(BASE_KEY);
   const lastRevisionRaw = localStorage.getItem(REVISION_KEY);
-  const base = baseRaw ? JSON.parse(baseRaw) as Record<string, string> : null;
+  let base: Record<string, string> | null = null;
+  if (baseRaw) {
+    try {
+      const parsed: unknown = JSON.parse(baseRaw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) ||
+          !Object.entries(parsed as Record<string, unknown>).every(([key, value]) => key.startsWith(PREFIX) && typeof value === 'string')) {
+        return { status: 'conflict', message: 'Local sync metadata is invalid. Export a backup before reconnecting; no remote data was applied.' };
+      }
+      base = parsed as Record<string, string>;
+    } catch {
+      return { status: 'conflict', message: 'Local sync metadata cannot be read. Export a backup before reconnecting; no remote data was applied.' };
+    }
+  }
   const lastRevision = lastRevisionRaw === null ? null : Number(lastRevisionRaw);
+  if (lastRevision !== null && (!Number.isInteger(lastRevision) || lastRevision < 0)) {
+    return { status: 'conflict', message: 'Local sync revision is invalid. Export a backup before reconnecting; no remote data was applied.' };
+  }
 
   // First pairing: only automatically seed an empty server. Never silently replace existing records.
   if (lastRevision === null) {
