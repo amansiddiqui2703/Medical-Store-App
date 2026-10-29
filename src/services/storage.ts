@@ -16,14 +16,47 @@ const STORAGE_KEYS = {
   LAST_CRON_RUN: 'refilldesk_last_cron_run',
 };
 
+/**
+ * Preserve malformed local data before falling back to an empty view. Without this,
+ * a later React save effect could overwrite the only copy of corrupted records.
+ * Recovery keys deliberately do not use the sync prefix.
+ */
+function preserveCorruptValue(key: string, raw: string | null): void {
+  if (raw === null) return;
+  try {
+    const recoveryKey = `medical_store_recovery_${key}_${Date.now()}`;
+    localStorage.setItem(recoveryKey, raw);
+    console.error(`Invalid local data for ${key} was preserved as ${recoveryKey}. Export it before clearing browser data.`);
+  } catch (error) {
+    console.error(`Could not preserve invalid local data for ${key}:`, error);
+  }
+}
+
+function readStoredArray<T>(key: string): T[] {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as T[];
+  } catch {
+    // Preserve raw value below before returning an empty view.
+  }
+  preserveCorruptValue(key, raw);
+  return [];
+}
+
 export class StorageService {
   static getStores(): MedicalStore[] {
+    const raw = localStorage.getItem(STORAGE_KEYS.STORES);
+    if (!raw) return initialStores;
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.STORES);
-      return data ? JSON.parse(data) : initialStores;
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as MedicalStore[];
     } catch {
-      return initialStores;
+      // Preserve raw value below before falling back to the default store profile.
     }
+    preserveCorruptValue(STORAGE_KEYS.STORES, raw);
+    return initialStores;
   }
 
   static saveStores(stores: MedicalStore[]) {
@@ -55,11 +88,9 @@ export class StorageService {
   }
   static getCustomers(): Customer[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      if (!data) return [];
-      const parsed: unknown = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed as Customer[] : [];
-    } catch {
+      return readStoredArray<Customer>(STORAGE_KEYS.CUSTOMERS);
+    } catch (error) {
+      console.error('Could not read local customers data:', error);
       return [];
     }
   }
@@ -70,11 +101,9 @@ export class StorageService {
 
   static getStock(): StockItem[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.STOCK);
-      if (!data) return [];
-      const parsed: unknown = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed as StockItem[] : [];
-    } catch {
+      return readStoredArray<StockItem>(STORAGE_KEYS.STOCK);
+    } catch (error) {
+      console.error('Could not read local stock data:', error);
       return [];
     }
   }
@@ -85,11 +114,9 @@ export class StorageService {
 
   static getOrders(): Order[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.ORDERS);
-      if (!data) return [];
-      const parsed: unknown = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed as Order[] : [];
-    } catch {
+      return readStoredArray<Order>(STORAGE_KEYS.ORDERS);
+    } catch (error) {
+      console.error('Could not read local orders data:', error);
       return [];
     }
   }
@@ -100,11 +127,9 @@ export class StorageService {
 
   static getTransactions(): CreditTransaction[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      if (!data) return [];
-      const parsed: unknown = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed as CreditTransaction[] : [];
-    } catch {
+      return readStoredArray<CreditTransaction>(STORAGE_KEYS.TRANSACTIONS);
+    } catch (error) {
+      console.error('Could not read local transactions data:', error);
       return [];
     }
   }
@@ -115,9 +140,9 @@ export class StorageService {
 
   static getReturns(): DistributorReturn[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.RETURNS);
-      return data ? JSON.parse(data) : [];
-    } catch {
+      return readStoredArray<DistributorReturn>(STORAGE_KEYS.RETURNS);
+    } catch (error) {
+      console.error('Could not read local returns data:', error);
       return [];
     }
   }
@@ -128,9 +153,9 @@ export class StorageService {
 
   static getLogs(): MessageLog[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.LOGS);
-      return data ? JSON.parse(data) : [];
-    } catch {
+      return readStoredArray<MessageLog>(STORAGE_KEYS.LOGS);
+    } catch (error) {
+      console.error('Could not read local logs data:', error);
       return [];
     }
   }
@@ -152,12 +177,18 @@ export class StorageService {
   }
 
   static getSettings(): StoreSettings {
+    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (!raw) return defaultSettings;
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return { ...defaultSettings, ...parsed as Partial<StoreSettings> };
+      }
     } catch {
-      return defaultSettings;
+      // Preserve raw value below before using defaults.
     }
+    preserveCorruptValue(STORAGE_KEYS.SETTINGS, raw);
+    return defaultSettings;
   }
 
   static saveSettings(settings: StoreSettings) {
@@ -199,11 +230,9 @@ export class StorageService {
 
   static getInvoices(): SubscriptionInvoice[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.INVOICES);
-      if (!data) return [];
-      const parsed: unknown = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed as SubscriptionInvoice[] : [];
-    } catch {
+      return readStoredArray<SubscriptionInvoice>(STORAGE_KEYS.INVOICES);
+    } catch (error) {
+      console.error('Could not read local invoices data:', error);
       return [];
     }
   }
