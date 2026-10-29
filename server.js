@@ -14,6 +14,15 @@ const DATA_FILE = path.join(DATA_DIR, 'medical-store-sync.json');
 const MAX_BYTES = 20 * 1024 * 1024;
 const MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024;
 const MAX_SNAPSHOT_KEYS = 500;
+let writeQueue = Promise.resolve();
+async function withWriteLock(work) {
+  const previous = writeQueue;
+  let release;
+  writeQueue = new Promise((resolve) => { release = resolve; });
+  await previous;
+  try { return await work(); } finally { release(); }
+}
+
 const ALLOWED_ORIGINS = new Set(
   (process.env.SYNC_ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
     .split(',')
@@ -138,22 +147,27 @@ app.post('/api/sync', requireAuth, async (req, res, next) => {
       }
     }
 
-    const current = await readSnapshot();
-    if (expectedRevision !== current.revision) {
-      return res.status(409).json({ error: 'SYNC_CONFLICT', revision: current.revision, updatedAt: current.updatedAt });
-    }
-
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    if (current.revision > 0) {
-      const backup = path.join(DATA_DIR, `medical-store-sync.backup-${Date.now()}.json`);
-      await fs.copyFile(DATA_FILE, backup);
-    }
-
-    const next = { revision: current.revision + 1, snapshot, updatedAt: new Date().toISOString() };
-    const temp = DATA_FILE + '.tmp';
-    await fs.writeFile(temp, JSON.stringify(next), { mode: 0o600 });
-    await fs.rename(temp, DATA_FILE);
-    res.json({ ok: true, revision: next.revision, updatedAt: next.updatedAt });
+    await withWriteLock(async () => {
+      const current = await readSnapshot();
+      if (expectedRevision !== current.revision) {
+        res.status(409).json({ error: 'SYNC_CONFLICT', revision: current.revision, updatedAt: current.updatedAt });
+        return;
+      }
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      if (current.revision > 0) {
+        const backup = path.join(DATA_DIR, `medical-store-sync.backup-${Date.now()}-${crypto.randomUUID()}.json`);
+        await fs.copyFile(DATA_FILE, backup);
+      }
+      const next = { revision: current.revision + 1, snapshot, updatedAt: new Date().toISOString() };
+      const temp = DATA_FILE + `.${crypto.randomUUID()}.tmp`;
+      try {
+        await fs.writeFile(temp, JSON.stringify(next), { mode: 0o600, flag: 'wx' });
+        await fs.rename(temp, DATA_FILE);
+      } finally {
+        await fs.rm(temp, { force: true }).catch(() => {});
+      }
+      res.json({ ok: true, revision: next.revision, updatedAt: next.updatedAt });
+    });
   } catch (error) {
     next(error);
   }
