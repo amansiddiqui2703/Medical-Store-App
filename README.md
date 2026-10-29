@@ -39,12 +39,13 @@ A responsive medical-store management app being prepared for **M.S. Medical Stor
 The repository contains a React + Vite responsive dashboard and installable PWA shell. It includes customer records, medicine batches, orders, expiry tracking, credit/udhaar, reminder logs and backup/restore UI. New customer, stock, order and payment lists start empty; the app must not seed fake patient, medicine, sale or payment records.
 
 Important limitations still being addressed:
-- Orders currently store medicine descriptions as free text. Completing an order does **not** reliably deduct batch-wise stock, and this app is not a verified POS/tax-billing system.
+- New order intake still stores the requested medicines as free text. The Create Bill flow now requires selecting actual in-stock, unexpired batches, validates quantities and prices, and deducts the selected stock when a sale is completed. Older completed orders may not have structured sale lines. This app is still not a verified POS/tax-billing system.
 - Paid subscription checkout is deliberately disabled because no verified payment gateway is connected. Do not transfer money based on placeholder payment instructions.
 - The subscription invoice screen is only a draft preview. It does not establish payment or tax compliance; configure real legal/tax details and get an accountant's review before issuing any invoice.
 - Browser storage is not a secure multi-user database. The private sync server is a prototype transport and does not provide full authentication, role permissions, conflict merging or a tested recovery guarantee.
 - Prescription files and customer data require security, retention, privacy and backup testing before real patient data is stored.
-- CI and real device testing must pass on the current commit before deployment can be considered verified.
+- A GitHub Actions build passed on commit `e8184d7396140e4ddbdef373a064e4f2b2c973b4`; additional receipt and billing-dialog changes were then pushed, so those newer commits must pass CI again before deployment can be considered verified.
+- The history receipt view can show saved batch-wise sale lines and offers a browser print action. Browser print layout and mobile/device behavior still require hands-on testing.
 
 **Do not use this prototype as the sole record for real medicine sales, inventory, accounting, or customer/patient information.**
 
