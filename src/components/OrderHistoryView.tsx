@@ -14,6 +14,7 @@ import {
   Receipt,
   ArrowUpDown,
   Filter,
+  Printer,
 } from 'lucide-react';
 import { Order, StoreSettings } from '../types';
 import { formatCurrency, formatDate, daysDifference, buildWhatsAppUrl, exportToCSV } from '../utils/formatters';
@@ -490,9 +491,16 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                 <div className="text-[11px] font-bold text-slate-900 mb-1">
                   Fulfilled Items:
                 </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg text-slate-800 leading-relaxed font-mono text-[11px]">
-                  {selectedReceiptOrder.itemsSummary}
-                </div>
+                {selectedReceiptOrder.saleItems?.length ? (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-left text-[11px]">
+                      <thead><tr className="bg-slate-50 text-slate-500"><th className="p-2">Medicine</th><th className="p-2">Batch</th><th className="p-2 text-right">Qty</th><th className="p-2 text-right">Price</th><th className="p-2 text-right">Total</th></tr></thead>
+                      <tbody className="divide-y divide-slate-100">{selectedReceiptOrder.saleItems.map((item, index) => <tr key={item.stockId + '-' + index}><td className="p-2">{item.name}</td><td className="p-2">{item.batch}</td><td className="p-2 text-right">{item.qty}</td><td className="p-2 text-right">{formatCurrency(item.unitPrice)}</td><td className="p-2 text-right font-semibold">{formatCurrency(item.lineTotal)}</td></tr>)}</tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-slate-50 rounded-lg text-slate-800 leading-relaxed font-mono text-[11px]">{selectedReceiptOrder.itemsSummary}<p className="mt-2 text-amber-700 font-sans">This older order has no saved batch-wise item breakdown.</p></div>
+                )}
               </div>
 
               <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-bold">
@@ -503,11 +511,17 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               </div>
 
               <div className="text-[10px] text-slate-400 text-center pt-2">
-                Fulfilled via RefillDesk · Made by Automindz Digital Labs
+                Sale receipt only — not a GST/tax invoice. Verify applicable legal and tax requirements before issuing official invoices.
               </div>
             </div>
 
             <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-2 px-4 py-2 font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print / Save PDF
+              </button>
               <button
                 onClick={() => setSelectedReceiptOrder(null)}
                 className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
