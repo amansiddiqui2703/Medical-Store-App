@@ -231,7 +231,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
                 <option value="Review needed">Review needed</option>
                 <option value="Quoted">Quoted</option>
                 <option value="Ready for pickup">Ready for pickup</option>
-                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
 
