@@ -77,7 +77,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({ invoice, store
               <p className="text-[11px] sm:text-xs text-slate-500 tabular-nums mt-0.5">Date: {invoiceDateFormatted}</p>
               <div className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold ${invoice.status === 'Paid' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
                 {invoice.status === 'Paid' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : null}
-                <span>{invoice.status === 'Paid' ? 'MARKED PAID — VERIFY PAYMENT' : 'PAYMENT PENDING'}</span>
+                <span>{invoice.plan === 'Trial' && invoice.totalAmount === 0 ? 'FREE TRIAL · ₹0' : invoice.status === 'Paid' ? 'MARKED PAID — VERIFY PAYMENT' : 'PAYMENT PENDING'}</span>
               </div>
             </div>
           </div>
