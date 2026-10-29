@@ -308,7 +308,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   <label className="text-xs font-semibold text-slate-700">Medicine / Batch
                     <select value={row.stockId || ''} onChange={e => setBillRows(prev => prev.map((r, i) => i === index ? { ...r, stockId: Number(e.target.value) } : r))} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs">
                       <option value="">Select stock batch</option>
-                      {sellableStock.map(item => <option key={item.id} value={item.id}>{item.name}{item.strength ? ' ' + item.strength : ''} + {' · Batch ' + item.batch + ' · ' + item.qty + ' available · MRP ₹' + item.mrp.toFixed(2)}</option>)}
+                      {sellableStock.map(item => <option key={item.id} value={item.id}>{item.name}{item.strength ? ' ' + item.strength : ''}{' · Batch ' + item.batch + ' · ' + item.qty + ' available · MRP ₹' + item.mrp.toFixed(2)}</option>)}
                     </select>
                   </label>
                   <label className="text-xs font-semibold text-slate-700">Quantity
