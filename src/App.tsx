@@ -348,10 +348,6 @@ export default function App() {
       showToast('Completion is temporarily disabled until billing and batch-wise stock deduction are ready.');
       return;
     }
-    if (newStatus === 'Completed' && order.prescriptionUrl && !order.isVerified) {
-      showToast('Verify the attached prescription before completing this order.');
-      return;
-    }
     setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o)));
     showToast(newStatus === 'Completed'
       ? 'Order marked completed. Reminder: inventory is not automatically deducted yet.'
