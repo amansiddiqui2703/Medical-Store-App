@@ -1,7 +1,7 @@
 {
-  "name": "react-example",
+  "name": "medical-store-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
@@ -20,7 +20,8 @@
     "vite": "^8.3.0",
     "express": "^4.21.2",
     "dotenv": "^17.2.3",
-    "motion": "^12.23.24"
+    "motion": "^12.23.24",
+    "@supabase/supabase-js": "^2.57.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
