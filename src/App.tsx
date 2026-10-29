@@ -340,34 +340,34 @@ export default function App() {
     setLogs(prev => [log, ...prev]);
   };
 
-  const handleCompleteSale = (orderId: number, items: SaleLineItem[]) => {
+  const handleCompleteSale = (orderId: number, items: SaleLineItem[]): boolean => {
     const order = orders.find(item => item.id === orderId);
     if (!order || order.status === 'Completed' || order.status === 'Cancelled') {
       showToast('This order is no longer available for billing.');
-      return;
+      return false;
     }
     if (order.prescriptionUrl && !order.isVerified) {
       showToast('Verify the attached prescription before billing.');
-      return;
+      return false;
     }
-    if (!items.length) { showToast('Add at least one medicine to the bill.'); return; }
+    if (!items.length) { showToast('Add at least one medicine to the bill.'); return false; }
     const today = new Date().toISOString().slice(0, 10);
     const required = new Map<number, number>();
     for (const line of items) {
       const expectedLineTotal = Math.round(line.unitPrice * line.qty * 100) / 100;
       if (!Number.isInteger(line.qty) || line.qty < 1 || !Number.isFinite(line.unitPrice) || line.unitPrice < 0 || !Number.isFinite(line.lineTotal) || line.lineTotal < 0 || line.lineTotal !== expectedLineTotal) {
-        showToast('Invalid medicine quantity or price.'); return;
+        showToast('Invalid medicine quantity or price.'); return false;
       }
       required.set(line.stockId, (required.get(line.stockId) || 0) + line.qty);
     }
     for (const [stockId, qty] of required) {
       const batch = stock.find(item => item.id === stockId);
       if (!batch || batch.expiry < today || batch.qty < qty) {
-        showToast('Stock changed or batch expired. Reopen the bill and check available stock.'); return;
+        showToast('Stock changed or batch expired. Reopen the bill and check available stock.'); return false;
       }
       const matchingLines = items.filter(line => line.stockId === stockId);
       if (matchingLines.some(line => line.name !== batch.name || line.batch !== batch.batch || line.unitPrice !== batch.mrp)) {
-        showToast('Medicine or batch details changed. Please reopen the bill.'); return;
+        showToast('Medicine or batch details changed. Please reopen the bill.'); return false;
       }
     }
     const total = Math.round(items.reduce((sum, line) => sum + line.lineTotal, 0) * 100) / 100;
@@ -381,6 +381,7 @@ export default function App() {
       : item
     ));
     showToast('Bill saved. Batch-wise stock deducted. Total: ₹' + total.toFixed(2));
+    return true;
   };
   const handleUpdateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
     const order = orders.find(item => item.id === orderId);
