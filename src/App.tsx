@@ -459,24 +459,36 @@ export default function App() {
     const cust = customers.find(c => c.id === customerId);
     if (!cust) return;
 
-    const currentBal = cust.credit || 0;
-    const newBalance =
-      type === 'payment' ? Math.max(0, currentBal - amount) : currentBal + amount;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast('Enter a payment/debit amount greater than ₹0.');
+      return;
+    }
+
+    const currentBal = Math.max(0, cust.credit || 0);
+    // Do not record a larger payment than the outstanding balance as if it were fully applied.
+    const recordedAmount = type === 'payment' ? Math.min(amount, currentBal) : amount;
+    if (type === 'payment' && recordedAmount <= 0) {
+      showToast('This customer has no outstanding udhaar balance.');
+      return;
+    }
+    const newBalance = type === 'payment' ? currentBal - recordedAmount : currentBal + recordedAmount;
 
     // Update customer credit balance
     setCustomers(prev =>
       prev.map(c => (c.id === customerId ? { ...c, credit: newBalance } : c))
     );
 
-    // Create transaction entry
+    // Create transaction entry using the amount actually applied to the balance.
     const newTx: CreditTransaction = {
       id: Date.now(),
       customerId,
       customerName: cust.name,
-      amount,
+      amount: recordedAmount,
       type,
       date: new Date().toISOString().slice(0, 10),
-      note,
+      note: type === 'payment' && recordedAmount < amount
+        ? `${note} (₹${amount - recordedAmount} not applied: balance was lower)`.trim()
+        : note,
       balanceAfter: newBalance,
     };
     setTransactions([newTx, ...transactions]);
