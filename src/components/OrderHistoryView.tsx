@@ -220,16 +220,16 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
         {/* Metric 4: Top Therapy Driver */}
         <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Primary Revenue Driver</span>
+            <span>Itemized Sale Receipts</span>
             <div className="p-2 rounded-lg bg-purple-50 text-purple-700">
               <BarChart3 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 text-base font-bold tracking-tight text-slate-900 truncate">
-            Cardiology &amp; Diab
+          <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900 tabular-nums">
+            {filteredOrders.filter(order => (order.saleItems?.length || 0) > 0).length}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            Chronic hypertension &amp; diabetes courses
+            Completed sales with saved batch details
           </div>
         </div>
       </div>
