@@ -24,13 +24,52 @@ function isServerSnapshot(value: unknown): value is ServerSnapshot {
   );
 }
 
-export function getSyncConfig(): SyncConfig | null {
+function isValidSyncConfig(value: unknown): value is SyncConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.serverUrl !== 'string' || typeof candidate.token !== 'string') return false;
+
+  const serverUrl = candidate.serverUrl.trim().replace(/\\/+$/, '');
+  const token = candidate.token.trim();
+  if (!serverUrl || token.length < 24) return false;
+
   try {
-    const raw = localStorage.getItem(CONFIG_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as SyncConfig;
-    return parsed.serverUrl && parsed.token ? parsed : null;
+    const parsed = new URL(serverUrl);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    const localHttpHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+    if (parsed.protocol === 'http:' && !localHttpHosts.has(parsed.hostname)) return false;
+    if (parsed.username || parsed.password || parsed.search || parsed.hash) return false;
+    return true;
   } catch {
+    return false;
+  }
+}
+
+function preserveInvalidSyncConfig(raw: string): void {
+  // Keep malformed settings available for manual recovery, outside the syncable app-data namespace.
+  try {
+    localStorage.setItem(`medical_store_recovery_sync_config_${Date.now()}`, raw);
+  } catch {
+    // Recovery storage can fail when browser storage is full or disabled; do not block app startup.
+  }
+}
+
+export function getSyncConfig(): SyncConfig | null {
+  const raw = localStorage.getItem(CONFIG_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isValidSyncConfig(parsed)) {
+      preserveInvalidSyncConfig(raw);
+      return null;
+    }
+    return {
+      serverUrl: parsed.serverUrl.trim().replace(/\\/+$/, ''),
+      token: parsed.token.trim(),
+    };
+  } catch {
+    preserveInvalidSyncConfig(raw);
     return null;
   }
 }
