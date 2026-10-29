@@ -42,6 +42,15 @@ export interface DistributorReturn {
 
 export type OrderStatus = 'Review needed' | 'Quoted' | 'Ready for pickup' | 'Completed' | 'Cancelled';
 
+export interface SaleLineItem {
+  stockId: number;
+  name: string;
+  batch: string;
+  qty: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
 export interface Order {
   id: number;
   orderNumber: string;
@@ -56,6 +65,8 @@ export interface Order {
   prescriptionFileName?: string;
   isVerified?: boolean;
   notes?: string;
+  saleItems?: SaleLineItem[];
+  completedAt?: string;
 }
 
 export interface CreditTransaction {
