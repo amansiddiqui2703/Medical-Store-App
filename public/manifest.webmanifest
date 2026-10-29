@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "M.S. Medical Store",
+  "short_name": "MS Medical",
+  "description": "Medical store inventory and management",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "icons": [
+    { "src": "/medical-store-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
