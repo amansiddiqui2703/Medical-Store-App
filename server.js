@@ -65,24 +65,37 @@ function requireAuth(req, res, next) {
 }
 
 async function readSnapshot() {
+  let raw;
   try {
-    const parsed = JSON.parse(await fs.readFile(DATA_FILE, 'utf8'));
-    if (
-      parsed &&
-      Number.isInteger(parsed.revision) &&
-      parsed.revision >= 0 &&
-      parsed.snapshot &&
-      typeof parsed.snapshot === 'object' &&
-      !Array.isArray(parsed.snapshot)
-    ) {
-      return parsed;
-    }
+    raw = await fs.readFile(DATA_FILE, 'utf8');
   } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      console.error('Could not read sync data file:', error?.message || error);
-    }
+    if (error?.code === 'ENOENT') return { revision: 0, snapshot: {}, updatedAt: null };
+    throw error;
   }
-  return { revision: 0, snapshot: {}, updatedAt: null };
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // Fail closed: never treat a corrupt existing data file as an empty store.
+    throw new Error('Sync data file is corrupt; refusing to initialize or overwrite it.');
+  }
+
+  if (
+    parsed &&
+    Number.isInteger(parsed.revision) &&
+    parsed.revision >= 0 &&
+    parsed.snapshot &&
+    typeof parsed.snapshot === 'object' &&
+    !Array.isArray(parsed.snapshot) &&
+    (parsed.updatedAt === null || typeof parsed.updatedAt === 'string') &&
+    Object.entries(parsed.snapshot).every(([key, value]) => key.startsWith('refilldesk_') && typeof value === 'string')
+  ) {
+    return parsed;
+  }
+
+  // Invalid persisted state must never be silently replaced with an empty snapshot.
+  throw new Error('Sync data file has an invalid structure; refusing to initialize or overwrite it.');
 }
 
 app.get('/api/health', (_req, res) => {
