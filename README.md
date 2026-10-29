@@ -34,13 +34,19 @@ A responsive medical-store management app being prepared for **M.S. Medical Stor
 - A sync conflict means no data was overwritten. Export a backup from each device before resolving it.
 - Browser local storage can be lost if browser data is cleared, the browser profile is removed, or the device fails. Maintain separate backups.
 
-## Current app status — prototype, not production-ready
+## Current app status — development prototype, not production-ready
 
-The repository contains a React + Vite responsive dashboard and installable PWA shell. Existing dashboard areas include customers, stock, orders, expiry, credit/udhaar, reminders and settings. Some areas still contain fictional demo data or simulated actions.
+The repository contains a React + Vite responsive dashboard and installable PWA shell. It includes customer records, medicine batches, orders, expiry tracking, credit/udhaar, reminder logs and backup/restore UI. New customer, stock, order and payment lists start empty; the app must not seed fake patient, medicine, sale or payment records.
 
-Before real shop use, the project still needs removal of all fictional records, verified billing and batch-wise stock deduction, invoice/receipt validation, backup/restore testing, device/build testing, stronger authentication and a reviewed conflict-resolution workflow.
+Important limitations still being addressed:
+- Orders currently store medicine descriptions as free text. Completing an order does **not** reliably deduct batch-wise stock, and this app is not a verified POS/tax-billing system.
+- Paid subscription checkout is deliberately disabled because no verified payment gateway is connected. Do not transfer money based on placeholder payment instructions.
+- The subscription invoice screen is only a draft preview. It does not establish payment or tax compliance; configure real legal/tax details and get an accountant's review before issuing any invoice.
+- Browser storage is not a secure multi-user database. The private sync server is a prototype transport and does not provide full authentication, role permissions, conflict merging or a tested recovery guarantee.
+- Prescription files and customer data require security, retention, privacy and backup testing before real patient data is stored.
+- CI and real device testing must pass on the current commit before deployment can be considered verified.
 
-**Do not use the current prototype as the sole record for real medicine sales or customer/patient information.**
+**Do not use this prototype as the sole record for real medicine sales, inventory, accounting, or customer/patient information.**
 
 ## Run locally
 
