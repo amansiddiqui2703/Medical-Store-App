@@ -491,11 +491,11 @@ export default function App() {
         : note,
       balanceAfter: newBalance,
     };
-    setTransactions([newTx, ...transactions]);
+    setTransactions(prev => [newTx, ...prev]);
 
     showToast(
       type === 'payment'
-        ? `Payment of ₹${amount} recorded for ${cust.name}.`
+        ? `Payment of ₹${recordedAmount} applied for ${cust.name}.`
         : `Debit of ₹${amount} added for ${cust.name}.`
     );
   };
