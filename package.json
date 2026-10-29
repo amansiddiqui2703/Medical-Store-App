@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "sync-server": "node server.js"
+    "sync-server": "node server.js",
+    "test:server": "node --test tests/*.test.js",
+    "check": "npm run lint && npm run test:server && npm run build"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
