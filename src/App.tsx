@@ -307,11 +307,9 @@ export default function App() {
 
   // Order Handlers
   const handleCreateOrder = (newOrderData: Omit<Order, 'id' | 'orderNumber' | 'date' | 'time'>) => {
-    // Order completion is intentionally blocked until structured sale lines and
-    // batch-wise stock deduction are implemented. Never create a completed sale
-    // from a free-text prescription description.
+    // A completed sale can only be created through the structured batch-billing flow.
     if (newOrderData.status === 'Completed') {
-      showToast('Order completion is disabled until reliable billing and stock deduction are implemented.');
+      showToast('Use Create Bill to complete an order and deduct the exact stock batches.');
       return;
     }
     const nextId = Date.now();
@@ -386,10 +384,9 @@ export default function App() {
   const handleUpdateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
     const order = orders.find(item => item.id === orderId);
     if (!order) return;
-    // Do not mark an order as sold/fulfilled while it has no structured bill lines
-    // and the app cannot atomically deduct the correct stock batches.
+    // Completion is only allowed through the validated bill flow.
     if (newStatus === 'Completed') {
-      showToast('Completion is temporarily disabled until billing and batch-wise stock deduction are ready.');
+      showToast('Use Create Bill to complete the order and deduct stock safely.');
       return;
     }
     setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o)));
@@ -397,6 +394,11 @@ export default function App() {
   };
 
   const handleUpdateOrderAmount = (orderId: number, amount: number) => {
+    const existingOrder = orders.find(order => order.id === orderId);
+    if (existingOrder?.status === 'Completed') {
+      showToast('Completed sale totals are locked. Use the saved receipt as the sales record.');
+      return;
+    }
     // Guard persisted values as well as the input control: never store NaN, Infinity,
     // or a negative amount that could corrupt totals/reports.
     if (!Number.isFinite(amount) || amount < 0) {
@@ -409,6 +411,11 @@ export default function App() {
   };
 
   const handleDeleteOrder = (orderId: number) => {
+    const existingOrder = orders.find(order => order.id === orderId);
+    if (existingOrder?.status === 'Completed') {
+      showToast('Completed sales cannot be deleted from history. Keep the receipt for your records.');
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this order?')) {
       setOrders(prev => prev.filter(o => o.id !== orderId));
       showToast('Order removed from queue.');
