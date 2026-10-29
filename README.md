@@ -49,6 +49,21 @@ Important limitations still being addressed:
 
 **Do not use this prototype as the sole record for real medicine sales, inventory, accounting, or customer/patient information.**
 
+
+## Production release gate
+
+Do not treat a green frontend build as proof that this app is ready for live pharmacy operations. Before storing real patient/customer information or using the app as the primary sales ledger, all of these must be completed:
+
+- Run the latest GitHub Actions checks and confirm type-check, sync integration tests and frontend build are green.
+- Test the full sale workflow with disposable test data: expired batches, insufficient stock, duplicate medicine lines, repeated submit/double-click, cancelled orders, browser refresh and backup restore.
+- Test Android and Windows browsers, PWA install, printing, offline mode, and device loss/recovery.
+- Verify backup restoration on a separate device and document who is responsible for daily backups.
+- Use HTTPS for remote sync, restrict access to a private network, rotate the sync token if exposed, and confirm no real customer or prescription data is included in logs/backups shared externally.
+- Decide and implement authentication, user roles, audit trail, data retention, privacy notice, and a tested recovery plan before multi-user or customer-facing launch.
+- Have the pharmacy owner/accountant verify applicable drug-sale, prescription, record-keeping, GST and invoice requirements. This app does not certify legal compliance.
+
+**Revenue note:** subscription checkout is intentionally disabled until a real payment provider, server-side payment verification, webhook signature validation, refund handling and tax/accounting workflow are implemented. Do not claim paid plans are live or accept payments through placeholder screens.
+
 ## Run locally
 
 1. Install Node.js LTS.
