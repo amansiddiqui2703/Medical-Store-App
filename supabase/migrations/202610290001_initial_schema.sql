@@ -32,6 +32,21 @@ create table public.store_memberships (
   primary key (store_id, user_id)
 );
 
+-- Bootstrap the owner membership when an authenticated user creates a store.
+create or replace function public.bootstrap_store_owner_membership()
+returns trigger language plpgsql security definer set search_path = ''
+as $
+begin
+  insert into public.store_memberships(store_id, user_id, role)
+  values (new.id, new.owner_user_id, 'owner');
+  return new;
+end;
+$;
+revoke all on function public.bootstrap_store_owner_membership() from public, anon, authenticated;
+create trigger bootstrap_store_owner_membership
+after insert on public.stores
+for each row execute function public.bootstrap_store_owner_membership();
+
 create table public.suppliers (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.stores(id) on delete cascade,
@@ -204,23 +219,27 @@ create table public.audit_logs (
 create index audit_logs_store_created_idx on public.audit_logs(store_id, created_at desc);
 
 create or replace function public.is_store_member(_store_id uuid)
-returns boolean language sql stable security definer set search_path = public
-as $$
+returns boolean language sql stable security definer set search_path = ''
+as $
   select exists (
     select 1 from public.store_memberships m
-    where m.store_id = _store_id and m.user_id = auth.uid() and m.is_active = true
+    where m.store_id = _store_id and m.user_id = (select auth.uid()) and m.is_active = true
   );
-$$;
+$;
+revoke all on function public.is_store_member(uuid) from public, anon;
+grant execute on function public.is_store_member(uuid) to authenticated;
 
 create or replace function public.has_store_role(_store_id uuid, _roles public.store_role[])
-returns boolean language sql stable security definer set search_path = public
-as $$
+returns boolean language sql stable security definer set search_path = ''
+as $
   select exists (
     select 1 from public.store_memberships m
-    where m.store_id = _store_id and m.user_id = auth.uid()
+    where m.store_id = _store_id and m.user_id = (select auth.uid())
       and m.is_active = true and m.role = any(_roles)
   );
-$$;
+$;
+revoke all on function public.has_store_role(uuid, public.store_role[]) from public, anon;
+grant execute on function public.has_store_role(uuid, public.store_role[]) to authenticated;
 
 create or replace function public.set_updated_at()
 returns trigger language plpgsql set search_path = public
@@ -249,10 +268,14 @@ alter table public.stock_movements enable row level security;
 alter table public.credit_transactions enable row level security;
 alter table public.audit_logs enable row level security;
 
-create policy "members can read their stores" on public.stores for select using (public.is_store_member(id));
-create policy "owners can update their stores" on public.stores for update using (public.has_store_role(id, array['owner']::public.store_role[])) with check (public.has_store_role(id, array['owner']::public.store_role[]));
-create policy "members can read memberships" on public.store_memberships for select using (public.is_store_member(store_id));
-create policy "owners/managers manage memberships" on public.store_memberships for all using (public.has_store_role(store_id, array['owner','manager']::public.store_role[])) with check (public.has_store_role(store_id, array['owner','manager']::public.store_role[]));
+create policy "members can read their stores" on public.stores for select to authenticated using (public.is_store_member(id));
+create policy "authenticated users create own store" on public.stores for insert to authenticated with check (owner_user_id = (select auth.uid()));
+create policy "owners can update their stores" on public.stores for update to authenticated using (public.has_store_role(id, array['owner']::public.store_role[])) with check (public.has_store_role(id, array['owner']::public.store_role[]));
+create policy "members can read memberships" on public.store_memberships for select to authenticated using (public.is_store_member(store_id));
+-- Only an existing owner may invite/change/remove staff. Managers cannot promote themselves.
+create policy "owners manage memberships" on public.store_memberships for insert to authenticated with check (public.has_store_role(store_id, array['owner']::public.store_role[]));
+create policy "owners update memberships" on public.store_memberships for update to authenticated using (public.has_store_role(store_id, array['owner']::public.store_role[])) with check (public.has_store_role(store_id, array['owner']::public.store_role[]));
+create policy "owners delete memberships" on public.store_memberships for delete to authenticated using (public.has_store_role(store_id, array['owner']::public.store_role[]));
 
 create policy "store members manage suppliers" on public.suppliers for all using (public.is_store_member(store_id)) with check (public.is_store_member(store_id));
 create policy "store members read products" on public.products for select using (public.is_store_member(store_id));
@@ -279,3 +302,16 @@ create policy "members read credit transactions" on public.credit_transactions f
 create policy "authorized staff create credit transactions" on public.credit_transactions for insert with check (public.has_store_role(store_id, array['owner','manager','cashier']::public.store_role[]));
 create policy "owners/managers read audit logs" on public.audit_logs for select using (public.has_store_role(store_id, array['owner','manager']::public.store_role[]));
 create policy "members create audit logs" on public.audit_logs for insert with check (public.is_store_member(store_id));
+
+
+-- Explicit client grants: RLS policies are authorization filters, not a replacement for grants.
+revoke all on public.stores, public.store_memberships, public.suppliers, public.products,
+  public.stock_batches, public.customers, public.invoices, public.invoice_items,
+  public.purchases, public.purchase_items, public.stock_movements,
+  public.credit_transactions, public.audit_logs from anon;
+grant select, insert, update on public.stores to authenticated;
+grant select, insert, update, delete on public.store_memberships to authenticated;
+grant select, insert, update, delete on public.suppliers, public.products,
+  public.stock_batches, public.customers, public.invoices, public.invoice_items,
+  public.purchases, public.purchase_items, public.stock_movements,
+  public.credit_transactions, public.audit_logs to authenticated;
