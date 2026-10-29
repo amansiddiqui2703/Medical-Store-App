@@ -474,7 +474,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                 {settings.address}
               </div>
               <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                Lic: {settings.licenseNumber} · Reg Pharmacist: {settings.ownerName}
+                Lic: {settings.licenseNumber || 'Not provided'} · Store owner: {settings.ownerName || 'Not provided'}
               </div>
             </div>
 
