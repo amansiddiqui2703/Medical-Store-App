@@ -257,7 +257,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   value={order.amount || ''}
                   placeholder="₹0"
                   onChange={e => onUpdateAmount(order.id, Number(e.target.value))}
-                  className="w-24 px-2 py-1 text-xs font-bold tabular-nums text-slate-900 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none"
+                  disabled={order.status === 'Completed'}
+                  className="w-24 px-2 py-1 text-xs font-bold tabular-nums text-slate-900 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
 
