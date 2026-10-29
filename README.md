@@ -2,21 +2,45 @@
 
 A responsive medical-store management app being prepared for **M.S. Medical Store, Una, Gujarat**.
 
-## Storage decision
+## No-cloud sync design (in progress)
 
-- **No Supabase, Firebase, or cloud database.**
-- The current app stores records in browser-local storage on the device/browser where it is used.
-- The same app can be installed/opened on Windows and Android using the same deployed HTTPS app.
-- **Important:** local data is separate on each device. A sale entered on the Windows PC will not automatically appear on the phone unless a future device-to-device transfer/sync feature is implemented.
-- Back up records before clearing browser data or reinstalling the browser/app.
+- No Supabase, Firebase, or hosted cloud database is used by this sync layer.
+- Each device keeps its working records in its own browser storage, so the phone can continue to be used while the Windows PC is off.
+- A private sync server on the Windows PC stores a JSON snapshot on the PC's own disk.
+- When the Windows PC/server is reachable again, the app checks for sync every 30 seconds and also retries when the browser comes online.
+- If both devices changed since the last sync, the app refuses to overwrite either side and reports a conflict. Export backups and resolve this safely before trying again.
+- The Windows PC must be on and reachable for remote sync to happen. While it is off, changes remain only on the device where they were entered.
+- The private server is a prototype sync transport, not a fully validated medical-record database. Do not use this app as the sole record for real sales/patient data until the complete app is tested.
 
-## Current status — prototype, not production-ready
+## Private server setup (Windows)
 
-The repository currently contains a React + Vite responsive dashboard and installable PWA shell. Existing dashboard areas include customers, stock, orders, expiry, credit/udhaar, reminders and settings. Some areas contain demo/sample data and simulated actions. This is not yet a verified live-billing system.
+1. Install Node.js LTS and run `npm install` in this repository.
+2. Create a long random sync secret (at least 24 characters). Keep it private.
+3. In PowerShell, from the project folder, set the secret for the current terminal session and start the server:
 
-Before real shop use, the project still needs a verified billing flow, batch-wise stock deduction, invoice/receipt validation, local backup/restore, removal of fictional demo records, error handling and build/device testing.
+   ```powershell
+   $env:SYNC_TOKEN = "replace-this-with-a-long-random-secret"
+   npm run sync-server
+   ```
 
-**Do not use the current prototype as the sole record for real medicine sales or customer/patient information until those checks are completed.**
+4. The server listens on port 8787 and writes its data to `data/medical-store-sync.json` on the Windows PC. Backups are created before later updates.
+5. For remote access without a cloud database, connect both devices to a private network such as Tailscale. Prefer an HTTPS private URL/reverse proxy for the server; do not expose port 8787 directly to the public internet.
+6. In the app, tap **Private Sync**, enter the private server URL and the same sync token. Keep the token private and do not share it with anyone.
+
+## Important first pairing rules
+
+- If the server is empty, the first configured device can initialize it with its local snapshot.
+- If the server already contains data and the device also contains data, the app stops and asks for a backup/primary-device decision. It does not silently merge or overwrite existing records.
+- A sync conflict means no data was overwritten. Export a backup from each device before resolving it.
+- Browser local storage can be lost if browser data is cleared, the browser profile is removed, or the device fails. Maintain separate backups.
+
+## Current app status — prototype, not production-ready
+
+The repository contains a React + Vite responsive dashboard and installable PWA shell. Existing dashboard areas include customers, stock, orders, expiry, credit/udhaar, reminders and settings. Some areas still contain fictional demo data or simulated actions.
+
+Before real shop use, the project still needs removal of all fictional records, verified billing and batch-wise stock deduction, invoice/receipt validation, backup/restore testing, device/build testing, stronger authentication and a reviewed conflict-resolution workflow.
+
+**Do not use the current prototype as the sole record for real medicine sales or customer/patient information.**
 
 ## Run locally
 
@@ -25,12 +49,6 @@ Before real shop use, the project still needs a verified billing flow, batch-wis
 3. Run `npm run dev` for development.
 4. Run `npm run lint` and `npm run build` before deployment.
 
-## Install on Windows and Android
+## Privacy
 
-Deploy the built app to an HTTPS host, then open that same app URL in Chrome on Windows and Android. Use **Install app** / **Add to Home screen** where available.
-
-This shares the same application interface, **not the local records** between devices. Cloud sync is intentionally not part of this build. A later no-cloud option could transfer data using an exported backup file or a local-network transfer service.
-
-## Privacy and backups
-
-Do not put API secrets in frontend environment variables. Export and store backups somewhere safe; local browser storage can be lost if site data is cleared, the browser profile is removed, or the device fails.
+Sync data is written to the Windows PC's local disk; this does not use a cloud database. The private sync token is stored in the browser on each configured device, so protect the devices and never expose the server publicly.
