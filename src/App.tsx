@@ -349,9 +349,7 @@ export default function App() {
       return;
     }
     setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o)));
-    showToast(newStatus === 'Completed'
-      ? 'Order marked completed. Reminder: inventory is not automatically deducted yet.'
-      : 'Order status updated to ' + newStatus);
+    showToast('Order status updated to ' + newStatus);
   };
 
   const handleUpdateOrderAmount = (orderId: number, amount: number) => {
