@@ -289,7 +289,7 @@ export class StorageService {
       date: new Date().toISOString().slice(0, 10),
       paymentMethod: params.paymentMethod,
       transactionRef: params.transactionRef || `TXN-${Date.now().toString().slice(-8)}`,
-      status: 'Paid',
+      status: params.plan === 'Trial' ? 'Trial' : 'Paid',
     };
 
     this.saveInvoices([newInvoice, ...currentInvoices]);
