@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { RefreshCw, CloudOff, Cloud } from 'lucide-react';
 import {
   ActiveTab,
   Customer,
   StockItem,
   Order,
   OrderStatus,
+  SaleLineItem,
   CreditTransaction,
   DistributorReturn,
   MessageLog,
@@ -14,6 +16,7 @@ import {
   SubscriptionPlanTier,
 } from './types';
 import { StorageService } from './services/storage';
+import { getSyncConfig, saveSyncConfig, syncNow } from './services/sync';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -84,6 +87,71 @@ export default function App() {
 
   // Mobile navigation drawer state
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Offline-first, private sync status. Data remains local when the server is unreachable.
+  const [syncStatus, setSyncStatus] = useState('Not connected');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const runSync = async () => {
+    if (isSyncing) return;
+    if (!getSyncConfig()) {
+      const serverUrl = window.prompt('Enter your private sync server URL (HTTPS recommended, e.g. your Tailscale HTTPS URL):');
+      if (!serverUrl) return;
+      const token = window.prompt('Enter the SYNC_TOKEN configured on your Windows PC (at least 24 characters):');
+      if (!token) return;
+      try {
+        saveSyncConfig(serverUrl, token);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Could not save sync configuration.');
+        return;
+      }
+    }
+    setIsSyncing(true);
+    try {
+      const result = await syncNow();
+      setSyncStatus(result.message);
+      if (result.status === 'conflict') {
+        showToast('Sync conflict: nothing was overwritten. Export a backup before resolving.');
+      } else if (result.status === 'synced') {
+        showToast('Sync check complete.');
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    const refreshFromLocalStorage = () => {
+      setCustomers(StorageService.getCustomers());
+      setStock(StorageService.getStock());
+      setOrders(StorageService.getOrders());
+      setTransactions(StorageService.getTransactions());
+      setReturns(StorageService.getReturns());
+      setLogs(StorageService.getLogs());
+      setSettings(StorageService.getSettings());
+      setStores(StorageService.getStores());
+      setInvoices(StorageService.getInvoices());
+      setActiveStoreId(StorageService.getActiveStoreId());
+    };
+    window.addEventListener('medical-store-sync-applied', refreshFromLocalStorage);
+    return () => window.removeEventListener('medical-store-sync-applied', refreshFromLocalStorage);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const attemptSync = async () => {
+      if (!getSyncConfig() || document.visibilityState === 'hidden') return;
+      const result = await syncNow();
+      if (!cancelled) setSyncStatus(result.message);
+    };
+    const timer = window.setInterval(attemptSync, 30000);
+    window.addEventListener('online', attemptSync);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener('online', attemptSync);
+    };
+  }, []);
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -231,14 +299,19 @@ export default function App() {
       setIsCronRunning(false);
       showToast(
         result.count > 0
-          ? `Automindz 9 AM Cron processed ${result.count} patient reminders!`
-          : '9 AM Cron completed: No patients due today or in 3 days.'
+          ? `Reminder scan found ${result.count} due customers. Messages were not sent; WhatsApp API integration is not configured.`
+          : 'Reminder scan complete: no customers due today. No WhatsApp messages were sent.'
       );
     }, 900);
   };
 
   // Order Handlers
   const handleCreateOrder = (newOrderData: Omit<Order, 'id' | 'orderNumber' | 'date' | 'time'>) => {
+    // A completed sale can only be created through the structured batch-billing flow.
+    if (newOrderData.status === 'Completed') {
+      showToast('Use Create Bill to complete an order and deduct the exact stock batches.');
+      return;
+    }
     const nextId = Date.now();
     const orderNumber = `ORD-${String(nextId).slice(-4)}`;
     const now = new Date();
@@ -250,7 +323,7 @@ export default function App() {
       time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setOrders([newOrder, ...orders]);
+    setOrders(prev => [newOrder, ...prev]);
     showToast(`Order #${orderNumber} registered successfully!`);
 
     // Log message if quote or review
@@ -262,28 +335,91 @@ export default function App() {
       status: 'simulated',
       triggerType: 'order_update',
     });
-    setLogs([log, ...logs]);
+    setLogs(prev => [log, ...prev]);
   };
 
+  const handleCompleteSale = (orderId: number, items: SaleLineItem[]): boolean => {
+    const order = orders.find(item => item.id === orderId);
+    if (!order || order.status === 'Completed' || order.status === 'Cancelled') {
+      showToast('This order is no longer available for billing.');
+      return false;
+    }
+    if (order.prescriptionUrl && !order.isVerified) {
+      showToast('Verify the attached prescription before billing.');
+      return false;
+    }
+    if (!items.length) { showToast('Add at least one medicine to the bill.'); return false; }
+    const today = new Date().toISOString().slice(0, 10);
+    const required = new Map<number, number>();
+    for (const line of items) {
+      const expectedLineTotal = Math.round(line.unitPrice * line.qty * 100) / 100;
+      if (!Number.isInteger(line.qty) || line.qty < 1 || !Number.isFinite(line.unitPrice) || line.unitPrice < 0 || !Number.isFinite(line.lineTotal) || line.lineTotal < 0 || line.lineTotal !== expectedLineTotal) {
+        showToast('Invalid medicine quantity or price.'); return false;
+      }
+      required.set(line.stockId, (required.get(line.stockId) || 0) + line.qty);
+    }
+    for (const [stockId, qty] of required) {
+      const batch = stock.find(item => item.id === stockId);
+      if (!batch || batch.expiry < today || batch.qty < qty) {
+        showToast('Stock changed or batch expired. Reopen the bill and check available stock.'); return false;
+      }
+      const matchingLines = items.filter(line => line.stockId === stockId);
+      if (matchingLines.some(line => line.name !== batch.name || line.batch !== batch.batch || line.unitPrice !== batch.mrp)) {
+        showToast('Medicine or batch details changed. Please reopen the bill.'); return false;
+      }
+    }
+    const total = Math.round(items.reduce((sum, line) => sum + line.lineTotal, 0) * 100) / 100;
+    const completedAt = new Date().toISOString();
+    setStock(prev => prev.map(batch => {
+      const qty = required.get(batch.id);
+      return qty ? { ...batch, qty: batch.qty - qty } : batch;
+    }));
+    setOrders(prev => prev.map(item => item.id === orderId
+      ? { ...item, status: 'Completed', amount: total, saleItems: items.map(line => ({ ...line })), completedAt }
+      : item
+    ));
+    showToast('Bill saved. Batch-wise stock deducted. Total: ₹' + total.toFixed(2));
+    return true;
+  };
   const handleUpdateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
-    setOrders(prev =>
-      prev.map(o => {
-        if (o.id === orderId) {
-          return { ...o, status: newStatus };
-        }
-        return o;
-      })
-    );
-    showToast(`Order status updated to "${newStatus}"`);
+    const order = orders.find(item => item.id === orderId);
+    if (!order) return;
+    if (order.status === 'Completed') {
+      showToast('Completed sales are locked to preserve inventory and history.');
+      return;
+    }
+    // Completion is only allowed through the validated bill flow.
+    if (newStatus === 'Completed') {
+      showToast('Use Create Bill to complete the order and deduct stock safely.');
+      return;
+    }
+    setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o)));
+    showToast('Order status updated to ' + newStatus);
   };
 
   const handleUpdateOrderAmount = (orderId: number, amount: number) => {
+    const existingOrder = orders.find(order => order.id === orderId);
+    if (existingOrder?.status === 'Completed') {
+      showToast('Completed sale totals are locked. Use the saved receipt as the sales record.');
+      return;
+    }
+    // Guard persisted values as well as the input control: never store NaN, Infinity,
+    // or a negative amount that could corrupt totals/reports.
+    if (!Number.isFinite(amount) || amount < 0) {
+      showToast('Bill amount must be a valid number greater than or equal to ₹0.');
+      return;
+    }
     setOrders(prev =>
-      prev.map(o => (o.id === orderId ? { ...o, amount } : o))
+      prev.map(o => (o.id === orderId ? { ...o, amount: Math.round(amount * 100) / 100 } : o))
     );
   };
 
   const handleDeleteOrder = (orderId: number) => {
+    const existingOrder = orders.find(order => order.id === orderId);
+    if (existingOrder?.status === 'Completed') {
+      showToast('Completed sales cannot be deleted from history. Keep the receipt for your records.');
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this order?')) {
       setOrders(prev => prev.filter(o => o.id !== orderId));
       showToast('Order removed from queue.');
@@ -392,31 +528,43 @@ export default function App() {
     const cust = customers.find(c => c.id === customerId);
     if (!cust) return;
 
-    const currentBal = cust.credit || 0;
-    const newBalance =
-      type === 'payment' ? Math.max(0, currentBal - amount) : currentBal + amount;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast('Enter a payment/debit amount greater than ₹0.');
+      return;
+    }
+
+    const currentBal = Math.max(0, cust.credit || 0);
+    // Do not record a larger payment than the outstanding balance as if it were fully applied.
+    const recordedAmount = type === 'payment' ? Math.min(amount, currentBal) : amount;
+    if (type === 'payment' && recordedAmount <= 0) {
+      showToast('This customer has no outstanding udhaar balance.');
+      return;
+    }
+    const newBalance = type === 'payment' ? currentBal - recordedAmount : currentBal + recordedAmount;
 
     // Update customer credit balance
     setCustomers(prev =>
       prev.map(c => (c.id === customerId ? { ...c, credit: newBalance } : c))
     );
 
-    // Create transaction entry
+    // Create transaction entry using the amount actually applied to the balance.
     const newTx: CreditTransaction = {
       id: Date.now(),
       customerId,
       customerName: cust.name,
-      amount,
+      amount: recordedAmount,
       type,
       date: new Date().toISOString().slice(0, 10),
-      note,
+      note: type === 'payment' && recordedAmount < amount
+        ? `${note} (₹${amount - recordedAmount} not applied: balance was lower)`.trim()
+        : note,
       balanceAfter: newBalance,
     };
-    setTransactions([newTx, ...transactions]);
+    setTransactions(prev => [newTx, ...prev]);
 
     showToast(
       type === 'payment'
-        ? `Payment of ₹${amount} recorded for ${cust.name}.`
+        ? `Payment of ₹${recordedAmount} applied for ${cust.name}.`
         : `Debit of ₹${amount} added for ${cust.name}.`
     );
   };
@@ -442,7 +590,7 @@ export default function App() {
     });
 
     setLogs([...newLogs, ...logs]);
-    showToast(`Dispatched ${selected.length} WhatsApp reminders via Automindz engine.`);
+    showToast(`Prepared ${selected.length} WhatsApp reminder log(s). No messages were sent automatically.`);
   };
 
   // Direct custom WhatsApp send
@@ -455,57 +603,97 @@ export default function App() {
       triggerType: 'custom',
     });
     setLogs([log, ...logs]);
-    showToast(`Message logged for ${name}.`);
+    showToast(`Message draft logged for ${name}. No message was sent automatically.`);
   };
 
-  // Data Export / Import / Reset
+  // Data Export / Import / Reset. Backups include every locally stored business record.
   const handleExportAllJSON = () => {
     const backup = {
-      version: '1.0.0',
+      schemaVersion: 2,
       exportedAt: new Date().toISOString(),
       store: settings,
+      stores,
+      activeStoreId,
       customers,
       stock,
       orders,
       transactions,
       returns,
       logs,
-      madeBy: 'Automindz Digital Labs',
+      invoices,
+      madeBy: 'M.S. Medical Store',
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `refilldesk_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `ms-medical-store-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    showToast('Complete store backup downloaded.');
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Backup downloaded. Keep a second copy outside this device.');
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Backup is too large (maximum 20 MB).');
+      input.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = ev => {
       try {
-        const parsed = JSON.parse(ev.target?.result as string);
-        if (parsed.customers) setCustomers(parsed.customers);
-        if (parsed.stock) setStock(parsed.stock);
-        if (parsed.orders) setOrders(parsed.orders);
-        if (parsed.transactions) setTransactions(parsed.transactions);
-        if (parsed.returns) setReturns(parsed.returns);
-        if (parsed.store) setSettings(parsed.store);
-        showToast('Store data imported successfully!');
+        const parsed: unknown = JSON.parse(String(ev.target?.result || ''));
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Backup must be a JSON object.');
+        const data = parsed as Record<string, unknown>;
+        const arrayKeys = ['customers', 'stock', 'orders', 'transactions', 'returns', 'logs', 'stores', 'invoices'] as const;
+        for (const key of arrayKeys) {
+          if (data[key] !== undefined && !Array.isArray(data[key])) {
+            throw new Error(`Invalid backup: "${key}" must be a list.`);
+          }
+        }
+        if (!Array.isArray(data.customers) || !Array.isArray(data.stock) || !Array.isArray(data.orders)) {
+          throw new Error('This backup is missing required customers, stock or orders lists.');
+        }
+        if (!window.confirm('Restore this backup? Current local records will be replaced. Export a backup of current data first.')) return;
+
+        setCustomers(data.customers as Customer[]);
+        setStock(data.stock as StockItem[]);
+        setOrders(data.orders as Order[]);
+        setTransactions(Array.isArray(data.transactions) ? data.transactions as CreditTransaction[] : []);
+        setReturns(Array.isArray(data.returns) ? data.returns as DistributorReturn[] : []);
+        setLogs(Array.isArray(data.logs) ? data.logs as MessageLog[] : []);
+        if (data.store && typeof data.store === 'object' && !Array.isArray(data.store)) setSettings({ ...StorageService.getSettings(), ...(data.store as Partial<StoreSettings>) });
+        if (Array.isArray(data.stores) && data.stores.length) {
+          setStores(data.stores as MedicalStore[]);
+          StorageService.saveStores(data.stores as MedicalStore[]);
+        }
+        if (typeof data.activeStoreId === 'string') {
+          setActiveStoreId(data.activeStoreId);
+          StorageService.setActiveStoreId(data.activeStoreId);
+        }
+        setInvoices(Array.isArray(data.invoices) ? data.invoices as SubscriptionInvoice[] : []);
+        showToast('Backup restored locally. Verify stock, balances and invoice totals before use.');
       } catch (err) {
-        alert('Invalid backup JSON file.');
+        alert(err instanceof Error ? err.message : 'Invalid backup JSON file.');
+      } finally {
+        input.value = '';
       }
+    };
+    reader.onerror = () => {
+      alert('Could not read this backup file.');
+      input.value = '';
     };
     reader.readAsText(file);
   };
 
   const handleResetData = () => {
-    if (window.confirm('Reset all store records to initial demo database? Current edits will be erased.')) {
+    if (window.confirm('Permanently clear all local store records on this device? Export a backup first. This cannot be undone.')) {
       StorageService.resetToDefaults();
       setCustomers(StorageService.getCustomers());
       setStock(StorageService.getStock());
@@ -514,7 +702,8 @@ export default function App() {
       setReturns(StorageService.getReturns());
       setLogs(StorageService.getLogs());
       setSettings(StorageService.getSettings());
-      showToast('Database reset to fresh demo state.');
+      setInvoices(StorageService.getInvoices());
+      showToast('Local records cleared on this device.');
     }
   };
 
@@ -599,7 +788,9 @@ export default function App() {
           {activeTab === 'orders' && (
             <OrdersView
               orders={orders}
+              stock={stock}
               settings={settings}
+              onCompleteSale={handleCompleteSale}
               onOpenNewOrder={() => setIsNewOrderOpen(true)}
               onViewPrescription={order => setSelectedPrescriptionOrder(order)}
               onUpdateStatus={handleUpdateOrderStatus}
@@ -800,6 +991,21 @@ export default function App() {
         udhaarCount={udhaarCount}
         storesCount={stores.length}
       />
+
+      {/* Private sync control. The app continues working locally if the PC/server is off. */}
+      <div className="fixed bottom-24 md:bottom-5 left-3 md:left-auto md:right-5 z-40 max-w-[min(92vw,360px)]">
+        <button
+          type="button"
+          onClick={runSync}
+          disabled={isSyncing}
+          title="Sync with your private Windows server"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 shadow-lg disabled:opacity-60"
+        >
+          {isSyncing ? <RefreshCw size={16} className="animate-spin" /> : getSyncConfig() ? <Cloud size={16} /> : <CloudOff size={16} />}
+          {isSyncing ? 'Syncing…' : 'Private Sync'}
+        </button>
+        <p className="mt-1 rounded-lg bg-white/95 px-2 py-1 text-[10px] leading-4 text-slate-500 shadow">{syncStatus}</p>
+      </div>
 
       {/* Global Toast Notification */}
       {toastMessage && (

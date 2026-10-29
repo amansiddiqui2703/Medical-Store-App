@@ -1,5 +1,5 @@
 import { Customer, StockItem, Order, CreditTransaction, DistributorReturn, MessageLog, StoreSettings, MedicalStore, SubscriptionInvoice, SubscriptionPlanTier } from '../types';
-import { initialCustomers, initialStock, initialOrders, initialTransactions, defaultSettings, initialStores, initialInvoices } from '../data/seedData';
+import { defaultSettings, initialStores } from '../data/seedData';
 import { daysDifference, cleanPhone } from '../utils/formatters';
 
 const STORAGE_KEYS = {
@@ -16,14 +16,47 @@ const STORAGE_KEYS = {
   LAST_CRON_RUN: 'refilldesk_last_cron_run',
 };
 
+/**
+ * Preserve malformed local data before falling back to an empty view. Without this,
+ * a later React save effect could overwrite the only copy of corrupted records.
+ * Recovery keys deliberately do not use the sync prefix.
+ */
+function preserveCorruptValue(key: string, raw: string | null): void {
+  if (raw === null) return;
+  try {
+    const recoveryKey = `medical_store_recovery_${key}_${Date.now()}`;
+    localStorage.setItem(recoveryKey, raw);
+    console.error(`Invalid local data for ${key} was preserved as ${recoveryKey}. Export it before clearing browser data.`);
+  } catch (error) {
+    console.error(`Could not preserve invalid local data for ${key}:`, error);
+  }
+}
+
+function readStoredArray<T>(key: string): T[] {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as T[];
+  } catch {
+    // Preserve raw value below before returning an empty view.
+  }
+  preserveCorruptValue(key, raw);
+  return [];
+}
+
 export class StorageService {
   static getStores(): MedicalStore[] {
+    const raw = localStorage.getItem(STORAGE_KEYS.STORES);
+    if (!raw) return initialStores;
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.STORES);
-      return data ? JSON.parse(data) : initialStores;
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as MedicalStore[];
     } catch {
-      return initialStores;
+      // Preserve raw value below before falling back to the default store profile.
     }
+    preserveCorruptValue(STORAGE_KEYS.STORES, raw);
+    return initialStores;
   }
 
   static saveStores(stores: MedicalStore[]) {
@@ -55,10 +88,10 @@ export class StorageService {
   }
   static getCustomers(): Customer[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      return data ? JSON.parse(data) : initialCustomers;
-    } catch {
-      return initialCustomers;
+      return readStoredArray<Customer>(STORAGE_KEYS.CUSTOMERS);
+    } catch (error) {
+      console.error('Could not read local customers data:', error);
+      return [];
     }
   }
 
@@ -68,10 +101,10 @@ export class StorageService {
 
   static getStock(): StockItem[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.STOCK);
-      return data ? JSON.parse(data) : initialStock;
-    } catch {
-      return initialStock;
+      return readStoredArray<StockItem>(STORAGE_KEYS.STOCK);
+    } catch (error) {
+      console.error('Could not read local stock data:', error);
+      return [];
     }
   }
 
@@ -81,19 +114,10 @@ export class StorageService {
 
   static getOrders(): Order[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.ORDERS);
-      if (!data) return initialOrders;
-      const parsed: Order[] = JSON.parse(data);
-      if (parsed.length < initialOrders.length) {
-        const existingIds = new Set(parsed.map(o => o.id));
-        const missing = initialOrders.filter(o => !existingIds.has(o.id));
-        const merged = [...parsed, ...missing];
-        this.saveOrders(merged);
-        return merged;
-      }
-      return parsed;
-    } catch {
-      return initialOrders;
+      return readStoredArray<Order>(STORAGE_KEYS.ORDERS);
+    } catch (error) {
+      console.error('Could not read local orders data:', error);
+      return [];
     }
   }
 
@@ -103,10 +127,10 @@ export class StorageService {
 
   static getTransactions(): CreditTransaction[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      return data ? JSON.parse(data) : initialTransactions;
-    } catch {
-      return initialTransactions;
+      return readStoredArray<CreditTransaction>(STORAGE_KEYS.TRANSACTIONS);
+    } catch (error) {
+      console.error('Could not read local transactions data:', error);
+      return [];
     }
   }
 
@@ -116,9 +140,9 @@ export class StorageService {
 
   static getReturns(): DistributorReturn[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.RETURNS);
-      return data ? JSON.parse(data) : [];
-    } catch {
+      return readStoredArray<DistributorReturn>(STORAGE_KEYS.RETURNS);
+    } catch (error) {
+      console.error('Could not read local returns data:', error);
       return [];
     }
   }
@@ -129,30 +153,9 @@ export class StorageService {
 
   static getLogs(): MessageLog[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.LOGS);
-      if (data) return JSON.parse(data);
-      // default mock logs
-      return [
-        {
-          id: 1,
-          phone: '919876543210',
-          name: 'Ramesh Patel',
-          message: 'Namaste Ramesh Patel, reminder from Sanjivani Medical Store. Your Amlodipine 5mg refill is scheduled for soon. Would you like it kept ready?',
-          status: 'delivered',
-          triggerType: 'refill_reminder',
-          createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-        },
-        {
-          id: 2,
-          phone: '919876543211',
-          name: 'Fatima Shaikh',
-          message: 'Namaste Fatima Shaikh, your diabetic medicine refill (Metformin 500mg) is due today. We have stock packed for you.',
-          status: 'delivered',
-          triggerType: 'refill_reminder',
-          createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-        },
-      ];
-    } catch {
+      return readStoredArray<MessageLog>(STORAGE_KEYS.LOGS);
+    } catch (error) {
+      console.error('Could not read local logs data:', error);
       return [];
     }
   }
@@ -174,12 +177,18 @@ export class StorageService {
   }
 
   static getSettings(): StoreSettings {
+    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (!raw) return defaultSettings;
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return { ...defaultSettings, ...parsed as Partial<StoreSettings> };
+      }
     } catch {
-      return defaultSettings;
+      // Preserve raw value below before using defaults.
     }
+    preserveCorruptValue(STORAGE_KEYS.SETTINGS, raw);
+    return defaultSettings;
   }
 
   static saveSettings(settings: StoreSettings) {
@@ -209,7 +218,7 @@ export class StorageService {
           phone: cleanPhone(customer.phone),
           name: customer.name,
           message: text,
-          status: settings.whatsappAccessToken ? 'delivered' : 'simulated',
+          status: 'simulated', // No WhatsApp API request is made by this local scan.
           triggerType: 'refill_reminder',
         });
       }
@@ -221,10 +230,10 @@ export class StorageService {
 
   static getInvoices(): SubscriptionInvoice[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.INVOICES);
-      return data ? JSON.parse(data) : initialInvoices;
-    } catch {
-      return initialInvoices;
+      return readStoredArray<SubscriptionInvoice>(STORAGE_KEYS.INVOICES);
+    } catch (error) {
+      console.error('Could not read local invoices data:', error);
+      return [];
     }
   }
 
@@ -239,6 +248,10 @@ export class StorageService {
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
   }): { updatedStore: MedicalStore; newInvoice: SubscriptionInvoice } {
+    // Paid activation must wait for a verified server-side payment callback.
+    if (params.plan !== 'Trial') {
+      throw new Error('Paid subscription activation is disabled until a verified payment gateway is integrated.');
+    }
     const stores = this.getStores();
     const store = stores.find(s => s.id === params.storeId);
     if (!store) {
@@ -305,7 +318,7 @@ export class StorageService {
       date: new Date().toISOString().slice(0, 10),
       paymentMethod: params.paymentMethod,
       transactionRef: params.transactionRef || `TXN-${Date.now().toString().slice(-8)}`,
-      status: 'Paid',
+      status: params.plan === 'Trial' ? 'Trial' : 'Paid',
     };
 
     this.saveInvoices([newInvoice, ...currentInvoices]);

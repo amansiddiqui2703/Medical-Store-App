@@ -16,7 +16,7 @@ export const NewStockModal: React.FC<NewStockModalProps> = ({
   const [name, setName] = useState('');
   const [strength, setStrength] = useState('');
   const [batch, setBatch] = useState('');
-  const [qty, setQty] = useState<number>(100);
+  const [qty, setQty] = useState<number>(1);
   const [expiry, setExpiry] = useState('');
   const [supplier, setSupplier] = useState('');
   const [cost, setCost] = useState<number>(0);
@@ -27,13 +27,17 @@ export const NewStockModal: React.FC<NewStockModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !batch || !expiry || !supplier) return;
+    const expiryDate = new Date(expiry + 'T00:00:00');
+    if (!name.trim() || !batch.trim() || !expiry || Number.isNaN(expiryDate.getTime()) || !supplier.trim() || !Number.isFinite(qty) || qty < 1 || !Number.isInteger(qty) || !Number.isFinite(cost) || cost < 0 || !Number.isFinite(mrp) || mrp < 0) {
+      window.alert('Check the medicine name, batch, expiry date, supplier, whole-unit quantity, purchase cost and MRP.');
+      return;
+    }
 
     onSubmit({
       name: name.trim(),
       strength: strength.trim(),
       batch: batch.trim().toUpperCase(),
-      qty: Number(qty) || 1,
+      qty: Math.floor(Number(qty)),
       expiry,
       supplier: supplier.trim(),
       cost: Number(cost) || 0,

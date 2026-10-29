@@ -14,6 +14,7 @@ import {
   Receipt,
   ArrowUpDown,
   Filter,
+  Printer,
 } from 'lucide-react';
 import { Order, StoreSettings } from '../types';
 import { formatCurrency, formatDate, daysDifference, buildWhatsAppUrl, exportToCSV } from '../utils/formatters';
@@ -34,12 +35,14 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc'>('date_desc');
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
 
+  const orderActivityDate = (order: Order) => order.completedAt ? order.completedAt.slice(0, 10) : order.date;
+
   // Filter completed orders only
   const allCompletedOrders = orders.filter(o => o.status === 'Completed');
 
   // Filter by time range
   const filteredOrders = allCompletedOrders.filter(order => {
-    const daysAgo = Math.abs(daysDifference(order.date));
+    const daysAgo = Math.abs(daysDifference(orderActivityDate(order)));
 
     let inRange = true;
     if (timeRange === '7') inRange = daysAgo <= 7;
@@ -57,8 +60,8 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
 
   // Sort logic
   const sortedOrders = [...filteredOrders].sort((a, b) => {
-    if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
-    if (sortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
+    if (sortBy === 'date_desc') return new Date(orderActivityDate(b)).getTime() - new Date(orderActivityDate(a)).getTime();
+    if (sortBy === 'date_asc') return new Date(orderActivityDate(a)).getTime() - new Date(orderActivityDate(b)).getTime();
     if (sortBy === 'amount_desc') return b.amount - a.amount;
     if (sortBy === 'amount_asc') return a.amount - b.amount;
     return 0;
@@ -78,7 +81,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
   ];
 
   filteredOrders.forEach(o => {
-    const daysAgo = Math.abs(daysDifference(o.date));
+    const daysAgo = Math.abs(daysDifference(orderActivityDate(o)));
     for (const bucket of weeklyBuckets) {
       if (daysAgo >= bucket.minDays && daysAgo <= bucket.maxDays) {
         bucket.count += 1;
@@ -90,6 +93,16 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
 
   const maxWeeklyRevenue = Math.max(...weeklyBuckets.map(b => b.revenue), 1);
 
+  const handlePrintReceipt = () => {
+    const receipt = document.getElementById('sale-receipt-content');
+    if (!receipt) return;
+    const printWindow = window.open('', '_blank', 'width=720,height=800');
+    if (!printWindow) { window.alert('Please allow pop-ups to print the receipt.'); return; }
+    printWindow.document.open();
+    printWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Sale receipt</title><style>body{font:13px Arial,sans-serif;color:#111;margin:24px}table{width:100%;border-collapse:collapse}th,td{padding:7px;border-bottom:1px solid #ddd;text-align:left}button{display:none}.text-right{text-align:right}.text-center{text-align:center}.text-amber-700{color:#92400e}</style></head><body>' + receipt.innerHTML + '</body></html>');
+    printWindow.document.close();
+    window.setTimeout(() => { printWindow.focus(); printWindow.print(); }, 250);
+  };
   // Export CSV handler
   const handleExportCSV = () => {
     const headers = [
@@ -110,8 +123,8 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
       o.customerName,
       o.phone,
       o.itemsSummary,
-      o.date,
-      o.time,
+      orderActivityDate(o),
+      o.completedAt ? new Date(o.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : o.time,
       o.amount,
       o.prescriptionUrl ? 'YES' : 'NO',
       o.isVerified ? 'YES' : 'NO',
@@ -209,16 +222,16 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
         {/* Metric 4: Top Therapy Driver */}
         <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Primary Revenue Driver</span>
+            <span>Itemized Sale Receipts</span>
             <div className="p-2 rounded-lg bg-purple-50 text-purple-700">
               <BarChart3 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 text-base font-bold tracking-tight text-slate-900 truncate">
-            Cardiology &amp; Diab
+          <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900 tabular-nums">
+            {filteredOrders.filter(order => (order.saleItems?.length || 0) > 0).length}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            Chronic hypertension &amp; diabetes courses
+            Completed sales with saved batch details
           </div>
         </div>
       </div>
@@ -282,7 +295,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               timeRange === '30' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Past 30 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(o.date)) <= 30).length})
+            Past 30 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(orderActivityDate(o))) <= 30).length})
           </button>
           <button
             onClick={() => setTimeRange('14')}
@@ -290,7 +303,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               timeRange === '14' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Past 14 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(o.date)) <= 14).length})
+            Past 14 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(orderActivityDate(o))) <= 14).length})
           </button>
           <button
             onClick={() => setTimeRange('7')}
@@ -298,7 +311,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               timeRange === '7' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Past 7 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(o.date)) <= 7).length})
+            Past 7 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(orderActivityDate(o))) <= 7).length})
           </button>
           <button
             onClick={() => setTimeRange('all')}
@@ -356,7 +369,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sortedOrders.map(order => {
-                const daysAgo = Math.abs(daysDifference(order.date));
+                const daysAgo = Math.abs(daysDifference(orderActivityDate(order)));
 
                 return (
                   <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
@@ -384,10 +397,10 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
 
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="font-medium text-slate-900 tabular-nums">
-                        {formatDate(order.date)}
+                        {formatDate(orderActivityDate(order))}
                       </div>
                       <div className="text-[10px] text-slate-400 tabular-nums">
-                        {order.time} · {daysAgo === 0 ? 'Today' : `${daysAgo}d ago`}
+                        {order.completedAt ? new Date(order.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : order.time} · {daysAgo === 0 ? 'Today' : `${daysAgo}d ago`}
                       </div>
                     </td>
 
@@ -453,7 +466,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
       {/* Order Receipt Modal */}
       {selectedReceiptOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 p-6 space-y-4 text-xs">
+          <div id="sale-receipt-content" className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 p-6 space-y-4 text-xs">
             {/* Pharmacy Receipt Header */}
             <div className="text-center border-b border-slate-200 pb-4">
               <div className="font-bold text-base text-slate-900">
@@ -463,7 +476,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                 {settings.address}
               </div>
               <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                Lic: {settings.licenseNumber} · Reg Pharmacist: {settings.ownerName}
+                Lic: {settings.licenseNumber || 'Not provided'} · Store owner: {settings.ownerName || 'Not provided'}
               </div>
             </div>
 
@@ -475,7 +488,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Date &amp; Time:</span>
-                <span className="font-mono">{formatDate(selectedReceiptOrder.date)} {selectedReceiptOrder.time}</span>
+                <span className="font-mono">{selectedReceiptOrder.completedAt ? new Date(selectedReceiptOrder.completedAt).toLocaleString('en-IN') : `${formatDate(selectedReceiptOrder.date)} ${selectedReceiptOrder.time}`}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Patient:</span>
@@ -490,24 +503,37 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                 <div className="text-[11px] font-bold text-slate-900 mb-1">
                   Fulfilled Items:
                 </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg text-slate-800 leading-relaxed font-mono text-[11px]">
-                  {selectedReceiptOrder.itemsSummary}
-                </div>
+                {selectedReceiptOrder.saleItems?.length ? (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-left text-[11px]">
+                      <thead><tr className="bg-slate-50 text-slate-500"><th className="p-2">Medicine</th><th className="p-2">Batch</th><th className="p-2 text-right">Qty</th><th className="p-2 text-right">Price</th><th className="p-2 text-right">Total</th></tr></thead>
+                      <tbody className="divide-y divide-slate-100">{selectedReceiptOrder.saleItems.map((item, index) => <tr key={item.stockId + '-' + index}><td className="p-2">{item.name}</td><td className="p-2">{item.batch}</td><td className="p-2 text-right">{item.qty}</td><td className="p-2 text-right">{formatCurrency(item.unitPrice)}</td><td className="p-2 text-right font-semibold">{formatCurrency(item.lineTotal)}</td></tr>)}</tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-slate-50 rounded-lg text-slate-800 leading-relaxed font-mono text-[11px]">{selectedReceiptOrder.itemsSummary}<p className="mt-2 text-amber-700 font-sans">This older order has no saved batch-wise item breakdown.</p></div>
+                )}
               </div>
 
               <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-bold">
-                <span>Total Amount Paid:</span>
+                <span>Sale Total:</span>
                 <span className="text-teal-900 tabular-nums">
                   {formatCurrency(selectedReceiptOrder.amount)}
                 </span>
               </div>
 
               <div className="text-[10px] text-slate-400 text-center pt-2">
-                Fulfilled via RefillDesk · Made by Automindz Digital Labs
+                Sale receipt only — not a GST/tax invoice. Verify applicable legal and tax requirements before issuing official invoices.
               </div>
             </div>
 
             <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+              <button
+                onClick={handlePrintReceipt}
+                className="inline-flex items-center gap-2 px-4 py-2 font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print / Save PDF
+              </button>
               <button
                 onClick={() => setSelectedReceiptOrder(null)}
                 className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"

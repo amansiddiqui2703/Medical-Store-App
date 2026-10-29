@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { X, Upload, Sparkles, FileText, Check } from 'lucide-react';
+import { X, Upload, FileText, Check } from 'lucide-react';
 import { Customer, Order, OrderStatus } from '../types';
-import { generateSampleRxSvg } from '../utils/formatters';
 
 interface NewOrderModalProps {
   isOpen: boolean;
@@ -40,32 +39,41 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPrescriptionFileName(file.name);
+      const isAllowedType = file.type === 'application/pdf' || file.type.startsWith('image/');
+      const hasAllowedExtension = /\.(pdf|png|jpe?g|webp|gif|bmp)$/i.test(file.name);
+      if (!isAllowedType && !hasAllowedExtension) {
+        window.alert('Upload a PDF or image file only.');
+        e.target.value = '';
+        return;
+      }
+      // Attachments are stored inside browser localStorage in this prototype; large files can
+      // exceed the browser quota and prevent ordinary shop records from saving.
+      if (file.size > 1024 * 1024) {
+        window.alert('For reliability, prescription attachments must be 1 MB or smaller until secure file storage is connected.');
+        e.target.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
-        setPrescriptionUrl(reader.result as string);
+        if (typeof reader.result !== 'string') {
+          window.alert('Could not read this prescription file. Please try another file.');
+          e.target.value = '';
+          return;
+        }
+        setPrescriptionUrl(reader.result);
+        setPrescriptionFileName(file.name);
+      };
+      reader.onerror = () => {
+        window.alert('Could not read this prescription file. Please try again.');
+        e.target.value = '';
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const loadSampleChronicRx = () => {
-    const name = customerName || 'Pooja Verma';
-    const svgUrl = generateSampleRxSvg(name, 'S. M. Joshi', [
-      'Telmisartan 40mg + Hydrochlorothiazide 12.5mg (30 Tabs)',
-      'Metformin 500mg SR (60 Tabs)',
-      'Atorvastatin 10mg (30 Tabs)',
-    ]);
-    setPrescriptionUrl(svgUrl);
-    setPrescriptionFileName(`sample_rx_${name.toLowerCase().replace(/\s+/g, '_')}.svg`);
-    if (!itemsSummary) {
-      setItemsSummary('Monthly Chronic course: Telmisartan 40mg, Metformin 500mg, Atorvastatin 10mg');
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !phone || !itemsSummary) return;
+    if (!customerName.trim() || !phone.trim() || !itemsSummary.trim() || !Number.isFinite(amount) || amount < 0) return;
 
     onSubmit({
       customerName: customerName.trim(),
@@ -174,14 +182,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
               <label className="font-semibold text-slate-800">
                 Prescription Attachment (Image / PDF)
               </label>
-              <button
-                type="button"
-                onClick={loadSampleChronicRx}
-                className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 hover:text-teal-900 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Load Sample Doctor Rx</span>
-              </button>
+
             </div>
 
             <div className="flex items-center gap-3">
@@ -230,7 +231,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
                 <option value="Review needed">Review needed</option>
                 <option value="Quoted">Quoted</option>
                 <option value="Ready for pickup">Ready for pickup</option>
-                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
 
@@ -241,7 +242,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
               <input
                 type="number"
                 min="0"
-                step="1"
+                step="0.01"
                 value={amount || ''}
                 onChange={e => setAmount(Number(e.target.value))}
                 placeholder="0"
