@@ -92,7 +92,9 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   };
 
   const currentPlanInfo = planDetails[selectedPlan];
-  const totalAmount = currentPlanInfo.price;
+  const baseAmount = currentPlanInfo.price;
+  const gstAmount = Math.round(baseAmount * 0.18 * 100) / 100;
+  const totalAmount = Math.round((baseAmount + gstAmount) * 100) / 100;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
