@@ -5,6 +5,9 @@ import path from 'node:path';
 
 const app = express();
 const PORT = Number(process.env.SYNC_PORT || 8787);
+// Secure by default: do not expose the sync server on every network interface.
+// Set SYNC_HOST to a specific trusted private-interface IP only when remote sync is required.
+const HOST = process.env.SYNC_HOST || '127.0.0.1';
 const TOKEN = process.env.SYNC_TOKEN;
 const DATA_DIR = path.resolve(process.env.SYNC_DATA_DIR || './data');
 const DATA_FILE = path.join(DATA_DIR, 'medical-store-sync.json');
@@ -150,8 +153,8 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`M.S. Medical Store private sync server listening on port ${PORT}`);
-  console.log('Keep this server reachable only through a trusted private network such as Tailscale.');
+app.listen(PORT, HOST, () => {
+  console.log(`M.S. Medical Store private sync server listening on ${HOST}:${PORT}`);
+  console.log('Secure default: bound to loopback. For remote sync, set SYNC_HOST to a trusted private-interface IP and enforce firewall restrictions.');
   console.log('Set SYNC_ALLOWED_ORIGINS to the exact browser origin(s) used by the app.');
 });
