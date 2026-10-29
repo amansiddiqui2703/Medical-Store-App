@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { X, Upload, Sparkles, FileText, Check } from 'lucide-react';
+import { X, Upload, FileText, Check } from 'lucide-react';
 import { Customer, Order, OrderStatus } from '../types';
-import { generateSampleRxSvg } from '../utils/formatters';
 
 interface NewOrderModalProps {
   isOpen: boolean;
@@ -40,6 +39,11 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        window.alert('Prescription file must be 5 MB or smaller.');
+        e.target.value = '';
+        return;
+      }
       setPrescriptionFileName(file.name);
       const reader = new FileReader();
       reader.onload = () => {
@@ -49,23 +53,9 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
     }
   };
 
-  const loadSampleChronicRx = () => {
-    const name = customerName || 'Pooja Verma';
-    const svgUrl = generateSampleRxSvg(name, 'S. M. Joshi', [
-      'Telmisartan 40mg + Hydrochlorothiazide 12.5mg (30 Tabs)',
-      'Metformin 500mg SR (60 Tabs)',
-      'Atorvastatin 10mg (30 Tabs)',
-    ]);
-    setPrescriptionUrl(svgUrl);
-    setPrescriptionFileName(`sample_rx_${name.toLowerCase().replace(/\s+/g, '_')}.svg`);
-    if (!itemsSummary) {
-      setItemsSummary('Monthly Chronic course: Telmisartan 40mg, Metformin 500mg, Atorvastatin 10mg');
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !phone || !itemsSummary) return;
+    if (!customerName.trim() || !phone.trim() || !itemsSummary.trim() || !Number.isFinite(amount) || amount < 0) return;
 
     onSubmit({
       customerName: customerName.trim(),
@@ -174,14 +164,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
               <label className="font-semibold text-slate-800">
                 Prescription Attachment (Image / PDF)
               </label>
-              <button
-                type="button"
-                onClick={loadSampleChronicRx}
-                className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 hover:text-teal-900 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Load Sample Doctor Rx</span>
-              </button>
+
             </div>
 
             <div className="flex items-center gap-3">
