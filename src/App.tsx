@@ -317,7 +317,7 @@ export default function App() {
       time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setOrders([newOrder, ...orders]);
+    setOrders(prev => [newOrder, ...prev]);
     showToast(`Order #${orderNumber} registered successfully!`);
 
     // Log message if quote or review
@@ -329,19 +329,20 @@ export default function App() {
       status: 'simulated',
       triggerType: 'order_update',
     });
-    setLogs([log, ...logs]);
+    setLogs(prev => [log, ...prev]);
   };
 
   const handleUpdateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
-    setOrders(prev =>
-      prev.map(o => {
-        if (o.id === orderId) {
-          return { ...o, status: newStatus };
-        }
-        return o;
-      })
-    );
-    showToast(`Order status updated to "${newStatus}"`);
+    const order = orders.find(item => item.id === orderId);
+    if (!order) return;
+    if (newStatus === 'Completed' && order.prescriptionUrl && !order.isVerified) {
+      showToast('Verify the attached prescription before completing this order.');
+      return;
+    }
+    setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o)));
+    showToast(newStatus === 'Completed'
+      ? 'Order marked completed. Reminder: inventory is not automatically deducted yet.'
+      : 'Order status updated to ' + newStatus);
   };
 
   const handleUpdateOrderAmount = (orderId: number, amount: number) => {
