@@ -119,7 +119,7 @@ export interface SubscriptionInvoice {
   date: string;
   paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
   transactionRef: string;
-  status: 'Paid' | 'Pending';
+  status: 'Paid' | 'Pending' | 'Trial';
 }
 
 export interface MedicalStore {
