@@ -306,6 +306,13 @@ export default function App() {
 
   // Order Handlers
   const handleCreateOrder = (newOrderData: Omit<Order, 'id' | 'orderNumber' | 'date' | 'time'>) => {
+    // Order completion is intentionally blocked until structured sale lines and
+    // batch-wise stock deduction are implemented. Never create a completed sale
+    // from a free-text prescription description.
+    if (newOrderData.status === 'Completed') {
+      showToast('Order completion is disabled until reliable billing and stock deduction are implemented.');
+      return;
+    }
     const nextId = Date.now();
     const orderNumber = `ORD-${String(nextId).slice(-4)}`;
     const now = new Date();
@@ -335,6 +342,12 @@ export default function App() {
   const handleUpdateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
     const order = orders.find(item => item.id === orderId);
     if (!order) return;
+    // Do not mark an order as sold/fulfilled while it has no structured bill lines
+    // and the app cannot atomically deduct the correct stock batches.
+    if (newStatus === 'Completed') {
+      showToast('Completion is temporarily disabled until billing and batch-wise stock deduction are ready.');
+      return;
+    }
     if (newStatus === 'Completed' && order.prescriptionUrl && !order.isVerified) {
       showToast('Verify the attached prescription before completing this order.');
       return;
