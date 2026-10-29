@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, QrCode, CreditCard, Building2, Smartphone, ShieldCheck, Copy, CheckCheck } from 'lucide-react';
+import { X, Check, CreditCard, ShieldCheck } from 'lucide-react';
 import { SubscriptionPlanTier, MedicalStore } from '../types';
 import { formatCurrency } from '../utils/formatters';
 
@@ -29,9 +29,6 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const [selectedStoreId, setSelectedStoreId] = useState<string>(activeStoreId || (stores[0]?.id || ''));
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanTier>(initialSelectedPlan);
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer'>('UPI');
-  const [transactionRef, setTransactionRef] = useState<string>('');
-  const [selectedBank, setSelectedBank] = useState<string>('HDFC Bank');
-  const [copiedUPI, setCopiedUPI] = useState(false);
 
   if (!isOpen) return null;
 
@@ -96,37 +93,19 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
   const currentPlanInfo = planDetails[selectedPlan];
   const totalAmount = currentPlanInfo.price;
-  const baseAmount = totalAmount > 0 ? Math.round(totalAmount / 1.18) : 0;
-  const gstAmount = totalAmount - baseAmount;
-  const upiId = 'automindz@icici';
-
-  const handleCopyUPI = () => {
-    navigator.clipboard.writeText(upiId);
-    setCopiedUPI(true);
-    setTimeout(() => setCopiedUPI(false), 2500);
-  };
-
-  const handleFillDemoRef = () => {
-    if (paymentMethod === 'UPI') {
-      setTransactionRef(`UPI/${Math.floor(100000000000 + Math.random() * 900000000000)}`);
-    } else if (paymentMethod === 'NetBanking') {
-      setTransactionRef(`NB-${selectedBank.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`);
-    } else if (paymentMethod === 'Card') {
-      setTransactionRef(`CARD-AUTH-${Date.now().toString().slice(-6)}`);
-    } else {
-      setTransactionRef(`CHQ-${Date.now().toString().slice(-6)}`);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalTx = transactionRef.trim() || (selectedPlan === 'Trial' ? 'TRIAL-ACTIVATION' : `TXN-${Date.now().toString().slice(-8)}`);
+    if (selectedPlan !== 'Trial') {
+      window.alert('Paid-plan checkout is not connected to a verified payment gateway yet. No payment has been taken. Please use the free trial for now.');
+      return;
+    }
     onSubmit({
       storeId: selectedStoreId,
-      plan: selectedPlan,
-      billingPeriod: currentPlanInfo.billingPeriod,
+      plan: 'Trial',
+      billingPeriod: 'Monthly',
       paymentMethod,
-      transactionRef: finalTx,
+      transactionRef: 'TRIAL-ACTIVATION',
     });
   };
 
@@ -258,167 +237,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </div>
           </div>
 
-          {/* Payment Method Selector (Only needed if price > 0) */}
           {totalAmount > 0 && (
-            <div className="space-y-3">
-              <label className="block text-xs font-semibold text-slate-700">
-                Choose Payment Method
-              </label>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: 'UPI', label: 'UPI / QR', icon: <Smartphone className="w-3.5 h-3.5" /> },
-                  { id: 'NetBanking', label: 'Net Banking', icon: <Building2 className="w-3.5 h-3.5" /> },
-                  { id: 'Card', label: 'Debit / Card', icon: <CreditCard className="w-3.5 h-3.5" /> },
-                  { id: 'Cash/Bank Transfer', label: 'Bank RTGS', icon: <QrCode className="w-3.5 h-3.5" /> },
-                ].map(opt => (
-                  <button
-                    type="button"
-                    key={opt.id}
-                    onClick={() => setPaymentMethod(opt.id as any)}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
-                      paymentMethod === opt.id
-                        ? 'border-teal-700 bg-teal-50 text-teal-900'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    {opt.icon}
-                    <span>{opt.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Dynamic Payment Details Section */}
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                {paymentMethod === 'UPI' && (
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    {/* Visual QR Code Representation */}
-                    <div className="shrink-0 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs text-center">
-                      <div className="w-24 h-24 bg-slate-900 rounded flex flex-col items-center justify-center text-white p-2">
-                        <QrCode className="w-12 h-12 text-teal-400" />
-                        <span className="text-[9px] font-bold mt-1 tracking-wider">BHIM · UPI</span>
-                      </div>
-                      <span className="block text-[9px] text-slate-500 mt-1 font-mono">Scan & Pay</span>
-                    </div>
-
-                    <div className="space-y-2 flex-1 text-xs">
-                      <div>
-                        <span className="text-slate-500 text-[11px]">Automindz Official UPI ID:</span>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <code className="px-2 py-1 bg-white border border-slate-200 rounded text-teal-900 font-bold font-mono">
-                            {upiId}
-                          </code>
-                          <button
-                            type="button"
-                            onClick={handleCopyUPI}
-                            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-100 transition-colors cursor-pointer"
-                          >
-                            {copiedUPI ? <CheckCheck className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                            <span>{copiedUPI ? 'Copied' : 'Copy UPI'}</span>
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-slate-500">
-                        Scan with Google Pay, PhonePe, Paytm, or BHIM. Enter transaction reference/UTR below.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === 'NetBanking' && (
-                  <div className="space-y-3 text-xs">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        Select Corporate / Retail Bank
-                      </label>
-                      <select
-                        value={selectedBank}
-                        onChange={e => setSelectedBank(e.target.value)}
-                        className="w-full text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-700"
-                      >
-                        <option value="HDFC Bank">HDFC Bank</option>
-                        <option value="State Bank of India">State Bank of India (SBI)</option>
-                        <option value="ICICI Bank">ICICI Bank</option>
-                        <option value="Axis Bank">Axis Bank</option>
-                        <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-                      </select>
-                    </div>
-                    <p className="text-[11px] text-slate-500">
-                      You will be directed to {selectedBank} payment gateway upon confirmation.
-                    </p>
-                  </div>
-                )}
-
-                {paymentMethod === 'Card' && (
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="col-span-3">
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">Card Number</label>
-                      <input
-                        type="text"
-                        placeholder="4532 •••• •••• 8821"
-                        defaultValue="4532 9012 3456 8821"
-                        className="w-full bg-white border border-slate-200 rounded px-2.5 py-1.5 text-xs font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">Expiry</label>
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        defaultValue="08/29"
-                        className="w-full bg-white border border-slate-200 rounded px-2.5 py-1.5 text-xs font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">CVV</label>
-                      <input
-                        type="password"
-                        placeholder="•••"
-                        defaultValue="842"
-                        className="w-full bg-white border border-slate-200 rounded px-2.5 py-1.5 text-xs font-mono"
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold mb-1">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>256-Bit SSL</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === 'Cash/Bank Transfer' && (
-                  <div className="text-xs text-slate-600 space-y-1">
-                    <p className="font-semibold text-slate-900">Direct NEFT / RTGS Transfer Details:</p>
-                    <p><span className="font-medium text-slate-700">Account Name:</span> Automindz Digital Labs Pvt. Ltd.</p>
-                    <p><span className="font-medium text-slate-700">Account Number:</span> 982001199014 (Current Account)</p>
-                    <p><span className="font-medium text-slate-700">IFSC Code:</span> ICIC0000011 (BKC Branch, Mumbai)</p>
-                  </div>
-                )}
-
-                {/* Transaction Reference Input */}
-                <div className="mt-3 pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2">
-                  <div className="w-full sm:w-auto flex-1">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      UTR / Transaction Reference No.
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. UPI/283910283910 or Cheque No."
-                      value={transactionRef}
-                      onChange={e => setTransactionRef(e.target.value)}
-                      className="w-full text-xs font-mono bg-white border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-700"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleFillDemoRef}
-                    className="shrink-0 text-[11px] text-teal-800 hover:text-teal-950 font-semibold px-2 py-1 hover:bg-slate-200/50 rounded transition-colors cursor-pointer"
-                  >
-                    Auto-Fill Demo UTR
-                  </button>
-                </div>
-              </div>
+            <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950">
+              <p className="font-bold">Paid checkout is not available yet</p>
+              <p className="mt-1">No verified payment gateway is connected. Do not transfer money using placeholder details. Paid plans cannot be activated from this screen; the free trial remains available.</p>
             </div>
           )}
 
@@ -426,7 +248,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
               <ShieldCheck className="w-4 h-4 text-teal-700" />
-              <span>Instant activation & GST Tax Invoice receipt generation</span>
+              <span>Free trial only until secure checkout is configured</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -438,9 +260,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer"
+                disabled={selectedPlan !== 'Trial'}
+                className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
-                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : `Pay ${formatCurrency(totalAmount)} & Activate`}
+                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Paid checkout unavailable'}
               </button>
             </div>
           </div>
