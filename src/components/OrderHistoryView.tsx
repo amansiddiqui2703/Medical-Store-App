@@ -295,7 +295,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               timeRange === '30' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Past 30 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(o.date)) <= 30).length})
+            Past 30 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(orderActivityDate(o))) <= 30).length})
           </button>
           <button
             onClick={() => setTimeRange('14')}
@@ -303,7 +303,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               timeRange === '14' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Past 14 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(o.date)) <= 14).length})
+            Past 14 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(orderActivityDate(o))) <= 14).length})
           </button>
           <button
             onClick={() => setTimeRange('7')}
@@ -311,7 +311,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               timeRange === '7' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Past 7 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(o.date)) <= 7).length})
+            Past 7 Days ({allCompletedOrders.filter(o => Math.abs(daysDifference(orderActivityDate(o))) <= 7).length})
           </button>
           <button
             onClick={() => setTimeRange('all')}
@@ -369,7 +369,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sortedOrders.map(order => {
-                const daysAgo = Math.abs(daysDifference(order.date));
+                const daysAgo = Math.abs(daysDifference(orderActivityDate(order)));
 
                 return (
                   <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
