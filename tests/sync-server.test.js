@@ -120,6 +120,21 @@ test('rejects stale revisions instead of overwriting newer data', async () => {
   assert.equal((await response.json()).error, 'SYNC_CONFLICT');
 });
 
+test('serializes simultaneous writes with the same expected revision', async () => {
+  const post = (value) => fetch(`${baseUrl}/api/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Sync-Token': TOKEN },
+    body: JSON.stringify({ expectedRevision: 1, snapshot: { refilldesk_stock_v1: value } }),
+  });
+  const responses = await Promise.all([post('first'), post('second')]);
+  const statuses = responses.map(response => response.status).sort();
+  assert.deepEqual(statuses, [200, 409]);
+  const conflict = responses.find(response => response.status === 409);
+  assert.equal((await conflict.json()).error, 'SYNC_CONFLICT');
+  const current = await fetch(`${baseUrl}/api/sync`, { headers: { 'X-Sync-Token': TOKEN } });
+  assert.equal((await current.json()).revision, 2);
+});
+
 test('rejects unsupported snapshot keys and non-string values', async () => {
   for (const snapshot of [
     { customers: '[]' },
