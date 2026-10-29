@@ -92,13 +92,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   };
 
   const currentPlanInfo = planDetails[selectedPlan];
-  // Keep the subscription preview amounts in the component render scope so JSX can use them.
+  // Calculate preview-only values in render scope; paid checkout remains disabled.
   const baseAmount: number = currentPlanInfo.price;
-  const gstAmount: number = Math.round(baseAmount * 18) / 100;
+  const gstAmount: number = Math.round(baseAmount * 0.18 * 100) / 100;
   const totalAmount: number = Math.round((baseAmount + gstAmount) * 100) / 100;
-  const baseAmount = currentPlanInfo.price;
-  const gstAmount = Math.round(baseAmount * 0.18 * 100) / 100;
-  const totalAmount = Math.round((baseAmount + gstAmount) * 100) / 100;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
