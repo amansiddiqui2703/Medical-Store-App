@@ -1,48 +1,36 @@
 # M.S. Medical Store App
 
-Medical-store management prototype for M.S. Medical Store, Una, Gujarat. The goal is one online workspace that can be opened on Android and Windows, with data shared across devices.
+A responsive medical-store management app being prepared for **M.S. Medical Store, Una, Gujarat**.
+
+## Storage decision
+
+- **No Supabase, Firebase, or cloud database.**
+- The current app stores records in browser-local storage on the device/browser where it is used.
+- The same app can be installed/opened on Windows and Android using the same deployed HTTPS app.
+- **Important:** local data is separate on each device. A sale entered on the Windows PC will not automatically appear on the phone unless a future device-to-device transfer/sync feature is implemented.
+- Back up records before clearing browser data or reinstalling the browser/app.
 
 ## Current status — prototype, not production-ready
 
-- React + Vite responsive web app; PWA install metadata has been added for phone/desktop installation.
-- Supabase Auth sign-up/sign-in gate is scaffolded.
-- The current dashboard still stores business records in browser `localStorage`. Shared business-data sync is **not implemented yet**.
-- Existing `src/data/seedData.ts` contains fictional demo data. After login, use only the clearly marked prototype preview.
-- The initial SQL migration is a starting point, not a validated production database. Checkout, stock deduction, invoice numbering, GST validation, role-based access, sync/conflict handling, backup/restore, and end-to-end tests remain incomplete.
+The repository currently contains a React + Vite responsive dashboard and installable PWA shell. Existing dashboard areas include customers, stock, orders, expiry, credit/udhaar, reminders and settings. Some areas contain demo/sample data and simulated actions. This is not yet a verified live-billing system.
 
-**Do not use this version for live medicine billing or real patient/customer data.** This project must pass the launch gates in `docs/PRODUCTION_READINESS.md` before a real store uses it.
+Before real shop use, the project still needs a verified billing flow, batch-wise stock deduction, invoice/receipt validation, local backup/restore, removal of fictional demo records, error handling and build/device testing.
 
-## Planned free-first architecture
+**Do not use the current prototype as the sole record for real medicine sales or customer/patient information until those checks are completed.**
 
-- Frontend: React + Vite, responsive PWA for Android and Windows browsers.
-- Authentication and shared database: Supabase Auth + PostgreSQL with row-level security (RLS).
-- Each store's records must be scoped to its authenticated store membership.
-- Offline billing is intentionally out of scope for the current version.
-- Free plans can have quotas, pauses, and backup/uptime limitations; free hosting is not a guarantee.
+## Run locally
 
-## Setup
+1. Install Node.js LTS.
+2. Run `npm install`.
+3. Run `npm run dev` for development.
+4. Run `npm run lint` and `npm run build` before deployment.
 
-1. Create a Supabase project at https://supabase.com/.
-2. Review the SQL migration and apply it only to a **new test project**.
-3. Copy `.env.example` to `.env.local` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (or publishable key).
-4. Run `npm install`, `npm run lint`, and `npm run build`.
-5. The auth gate should appear once configured. Do not treat a successful login as proof that dashboard data sync is connected.
+## Install on Windows and Android
 
-## Install on phone / Windows
+Deploy the built app to an HTTPS host, then open that same app URL in Chrome on Windows and Android. Use **Install app** / **Add to Home screen** where available.
 
-After the app is deployed to an HTTPS URL, open it in Chrome on Android or Windows and use the browser's **Install app** / **Add to Home screen** option if offered. The current service worker is network-only; it does not cache business data or provide offline billing.
+This shares the same application interface, **not the local records** between devices. Cloud sync is intentionally not part of this build. A later no-cloud option could transfer data using an exported backup file or a local-network transfer service.
 
-## Secret handling
+## Privacy and backups
 
-- A publishable/anon key is meant for browser use only when RLS and database grants are correct.
-- Never put a service-role/secret key in `VITE_*` variables; Vite embeds them into browser assets.
-- Never share or commit a database password, service-role key, GitHub token, WhatsApp token, or payment secret. Rotate any secret that was exposed.
-
-## Key files
-
-- `src/AuthGate.tsx` — authentication/setup gate and explicit demo-preview warning.
-- `src/lib/supabase.ts` — browser client bootstrap.
-- `public/manifest.webmanifest` — install metadata.
-- `public/sw.js` — network-only service worker (no offline data cache).
-- `supabase/migrations/202610290001_initial_schema.sql` — initial schema foundation.
-- `docs/PRODUCTION_READINESS.md` — audit and launch gates.
+Do not put API secrets in frontend environment variables. Export and store backups somewhere safe; local browser storage can be lost if site data is cleared, the browser profile is removed, or the device fails.
