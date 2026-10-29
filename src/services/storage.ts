@@ -1,5 +1,5 @@
 import { Customer, StockItem, Order, CreditTransaction, DistributorReturn, MessageLog, StoreSettings, MedicalStore, SubscriptionInvoice, SubscriptionPlanTier } from '../types';
-import { initialCustomers, initialStock, initialOrders, initialTransactions, defaultSettings, initialStores, initialInvoices } from '../data/seedData';
+import { defaultSettings, initialStores } from '../data/seedData';
 import { daysDifference, cleanPhone } from '../utils/formatters';
 
 const STORAGE_KEYS = {
