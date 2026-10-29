@@ -208,8 +208,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 {/* Status Dropdown */}
                 <select
                   value={order.status}
+                  disabled={order.status === 'Completed'}
                   onChange={e => onUpdateStatus(order.id, e.target.value as OrderStatus)}
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-lg border focus:outline-none cursor-pointer ${getStatusBadgeStyle(
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-lg border focus:outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${getStatusBadgeStyle(
                     order.status
                   )}`}
                 >
