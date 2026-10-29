@@ -29,7 +29,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({ invoice, store
         <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 bg-slate-900 text-white print:hidden gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Building2 className="w-4 sm:w-5 h-4 sm:h-5 text-teal-400 shrink-0" />
-            <span className="font-semibold text-xs sm:text-sm truncate">Automindz Digital Labs · Tax Invoice</span>
+            <span className="font-semibold text-xs sm:text-sm truncate">Automindz Digital Labs · Invoice Preview</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
@@ -62,23 +62,22 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({ invoice, store
               </div>
               <p className="text-xs font-bold text-teal-800 mt-0.5">Automindz Digital Labs Pvt. Ltd.</p>
               <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                804, Tech Park IV, Bandra Kurla Complex (BKC)<br />
-                Mumbai, Maharashtra, India · 400051<br />
-                <span className="font-semibold text-slate-700">GSTIN:</span> 27AABCA1234F1Z8 | State Code: 27 (MH)
+                Service-provider address and tax registration details are not configured.<br />
+                <span className="font-semibold text-amber-700">Draft only:</span> verify legal/tax details before issuing.
               </p>
             </div>
 
             <div className="sm:text-right">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
-                Tax Invoice / Cash Memo
+                Subscription Invoice Preview
               </span>
               <p className="text-xs sm:text-sm font-bold text-slate-900 tabular-nums mt-0.5">
                 {invoice.invoiceNumber}
               </p>
               <p className="text-[11px] sm:text-xs text-slate-500 tabular-nums mt-0.5">Date: {invoiceDateFormatted}</p>
-              <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-md text-[10px] sm:text-[11px] font-bold">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>PAYMENT CONFIRMED</span>
+              <div className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold ${invoice.status === 'Paid' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
+                {invoice.status === 'Paid' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : null}
+                <span>{invoice.status === 'Paid' ? 'MARKED PAID — VERIFY PAYMENT' : 'PAYMENT PENDING'}</span>
               </div>
             </div>
           </div>
@@ -110,8 +109,8 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({ invoice, store
               <p className="font-mono text-slate-600 text-[11px]">
                 Tx ID: {invoice.transactionRef}
               </p>
-              <p className="text-slate-500">
-                Place of Supply: Maharashtra (27)
+              <p className="text-amber-700 font-semibold">
+                Verify payment and tax details before relying on this preview.
               </p>
             </div>
           </div>
@@ -134,7 +133,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({ invoice, store
                       RefillDesk Operating Software — {invoice.plan} License
                     </p>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      Cloud pharmacy suite, automated 9 AM WhatsApp refill engine, prescription zoom desk, and Udhaar credit tracker.
+                      Software subscription. Feature availability depends on the deployed product and plan.
                     </p>
                   </td>
                   <td className="py-3 px-3 text-center font-mono text-slate-500 text-[11px]">998314</td>
