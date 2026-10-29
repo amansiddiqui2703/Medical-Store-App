@@ -130,28 +130,7 @@ export class StorageService {
   static getLogs(): MessageLog[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.LOGS);
-      if (data) return JSON.parse(data);
-      // default mock logs
-      return [
-        {
-          id: 1,
-          phone: '919876543210',
-          name: 'Ramesh Patel',
-          message: 'Namaste Ramesh Patel, reminder from Sanjivani Medical Store. Your Amlodipine 5mg refill is scheduled for soon. Would you like it kept ready?',
-          status: 'delivered',
-          triggerType: 'refill_reminder',
-          createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-        },
-        {
-          id: 2,
-          phone: '919876543211',
-          name: 'Fatima Shaikh',
-          message: 'Namaste Fatima Shaikh, your diabetic medicine refill (Metformin 500mg) is due today. We have stock packed for you.',
-          status: 'delivered',
-          triggerType: 'refill_reminder',
-          createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-        },
-      ];
+      return data ? JSON.parse(data) : [];
     } catch {
       return [];
     }
