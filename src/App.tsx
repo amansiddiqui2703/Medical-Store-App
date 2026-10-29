@@ -6,6 +6,7 @@ import {
   StockItem,
   Order,
   OrderStatus,
+  SaleLineItem,
   CreditTransaction,
   DistributorReturn,
   MessageLog,
@@ -339,6 +340,47 @@ export default function App() {
     setLogs(prev => [log, ...prev]);
   };
 
+  const handleCompleteSale = (orderId: number, items: SaleLineItem[]) => {
+    const order = orders.find(item => item.id === orderId);
+    if (!order || order.status === 'Completed' || order.status === 'Cancelled') {
+      showToast('This order is no longer available for billing.');
+      return;
+    }
+    if (order.prescriptionUrl && !order.isVerified) {
+      showToast('Verify the attached prescription before billing.');
+      return;
+    }
+    if (!items.length) { showToast('Add at least one medicine to the bill.'); return; }
+    const today = new Date().toISOString().slice(0, 10);
+    const required = new Map<number, number>();
+    for (const line of items) {
+      if (!Number.isInteger(line.qty) || line.qty < 1 || !Number.isFinite(line.unitPrice) || line.unitPrice < 0 || !Number.isFinite(line.lineTotal) || line.lineTotal < 0) {
+        showToast('Invalid medicine quantity or price.'); return;
+      }
+      required.set(line.stockId, (required.get(line.stockId) || 0) + line.qty);
+    }
+    for (const [stockId, qty] of required) {
+      const batch = stock.find(item => item.id === stockId);
+      if (!batch || batch.expiry < today || batch.qty < qty) {
+        showToast('Stock changed or batch expired. Reopen the bill and check available stock.'); return;
+      }
+      const matchingLines = items.filter(line => line.stockId === stockId);
+      if (matchingLines.some(line => line.name !== batch.name || line.batch !== batch.batch || line.unitPrice !== batch.mrp)) {
+        showToast('Medicine or batch details changed. Please reopen the bill.'); return;
+      }
+    }
+    const total = Math.round(items.reduce((sum, line) => sum + line.lineTotal, 0) * 100) / 100;
+    const completedAt = new Date().toISOString();
+    setStock(prev => prev.map(batch => {
+      const qty = required.get(batch.id);
+      return qty ? { ...batch, qty: batch.qty - qty } : batch;
+    }));
+    setOrders(prev => prev.map(item => item.id === orderId
+      ? { ...item, status: 'Completed', amount: total, saleItems: items.map(line => ({ ...line })), completedAt }
+      : item
+    ));
+    showToast('Bill saved. Batch-wise stock deducted. Total: ₹' + total.toFixed(2));
+  };
   const handleUpdateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
     const order = orders.find(item => item.id === orderId);
     if (!order) return;
@@ -733,7 +775,9 @@ export default function App() {
           {activeTab === 'orders' && (
             <OrdersView
               orders={orders}
+              stock={stock}
               settings={settings}
+              onCompleteSale={handleCompleteSale}
               onOpenNewOrder={() => setIsNewOrderOpen(true)}
               onViewPrescription={order => setSelectedPrescriptionOrder(order)}
               onUpdateStatus={handleUpdateOrderStatus}
