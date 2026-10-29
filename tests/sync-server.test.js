@@ -2,7 +2,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -142,4 +142,22 @@ test('rejects snapshots with too many keys', async () => {
     body: JSON.stringify({ expectedRevision: 1, snapshot }),
   });
   assert.equal(response.status, 413);
+});
+
+test('fails closed rather than treating a corrupt data file as an empty store', async () => {
+  const dataFile = path.join(dataDir, 'medical-store-sync.json');
+  await writeFile(dataFile, '{broken json', 'utf8');
+
+  const readResponse = await fetch(`${baseUrl}/api/sync`, {
+    headers: { 'X-Sync-Token': TOKEN },
+  });
+  assert.equal(readResponse.status, 500);
+
+  const writeResponse = await fetch(`${baseUrl}/api/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Sync-Token': TOKEN },
+    body: JSON.stringify({ expectedRevision: 0, snapshot: { refilldesk_stock_v1: '[]' } }),
+  });
+  assert.equal(writeResponse.status, 500);
+  assert.equal(await readFile(dataFile, 'utf8'), '{broken json');
 });
