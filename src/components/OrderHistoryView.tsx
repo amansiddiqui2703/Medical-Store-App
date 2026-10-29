@@ -35,12 +35,14 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc'>('date_desc');
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
 
+  const orderActivityDate = (order: Order) => order.completedAt ? order.completedAt.slice(0, 10) : order.date;
+
   // Filter completed orders only
   const allCompletedOrders = orders.filter(o => o.status === 'Completed');
 
   // Filter by time range
   const filteredOrders = allCompletedOrders.filter(order => {
-    const daysAgo = Math.abs(daysDifference(order.date));
+    const daysAgo = Math.abs(daysDifference(orderActivityDate(order)));
 
     let inRange = true;
     if (timeRange === '7') inRange = daysAgo <= 7;
@@ -58,8 +60,8 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
 
   // Sort logic
   const sortedOrders = [...filteredOrders].sort((a, b) => {
-    if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
-    if (sortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
+    if (sortBy === 'date_desc') return new Date(orderActivityDate(b)).getTime() - new Date(orderActivityDate(a)).getTime();
+    if (sortBy === 'date_asc') return new Date(orderActivityDate(a)).getTime() - new Date(orderActivityDate(b)).getTime();
     if (sortBy === 'amount_desc') return b.amount - a.amount;
     if (sortBy === 'amount_asc') return a.amount - b.amount;
     return 0;
@@ -79,7 +81,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
   ];
 
   filteredOrders.forEach(o => {
-    const daysAgo = Math.abs(daysDifference(o.date));
+    const daysAgo = Math.abs(daysDifference(orderActivityDate(o)));
     for (const bucket of weeklyBuckets) {
       if (daysAgo >= bucket.minDays && daysAgo <= bucket.maxDays) {
         bucket.count += 1;
@@ -121,8 +123,8 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
       o.customerName,
       o.phone,
       o.itemsSummary,
-      o.date,
-      o.time,
+      orderActivityDate(o),
+      o.completedAt ? new Date(o.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : o.time,
       o.amount,
       o.prescriptionUrl ? 'YES' : 'NO',
       o.isVerified ? 'YES' : 'NO',
@@ -395,10 +397,10 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
 
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="font-medium text-slate-900 tabular-nums">
-                        {formatDate(order.date)}
+                        {formatDate(orderActivityDate(order))}
                       </div>
                       <div className="text-[10px] text-slate-400 tabular-nums">
-                        {order.time} · {daysAgo === 0 ? 'Today' : `${daysAgo}d ago`}
+                        {order.completedAt ? new Date(order.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : order.time} · {daysAgo === 0 ? 'Today' : `${daysAgo}d ago`}
                       </div>
                     </td>
 
