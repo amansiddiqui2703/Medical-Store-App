@@ -177,8 +177,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   )}`}
                 >
                   {statuses.map(st => (
-                    <option key={st} value={st}>
-                      {st}
+                    <option key={st} value={st} disabled={st === 'Completed'}>
+                      {st === 'Completed' ? 'Completed (billing not ready)' : st}
                     </option>
                   ))}
                 </select>
