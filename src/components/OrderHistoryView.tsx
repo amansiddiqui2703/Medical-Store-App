@@ -99,7 +99,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
     printWindow.document.open();
     printWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Sale receipt</title><style>body{font:13px Arial,sans-serif;color:#111;margin:24px}table{width:100%;border-collapse:collapse}th,td{padding:7px;border-bottom:1px solid #ddd;text-align:left}button{display:none}.text-right{text-align:right}.text-center{text-align:center}.text-amber-700{color:#92400e}</style></head><body>' + receipt.innerHTML + '</body></html>');
     printWindow.document.close();
-    printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
+    window.setTimeout(() => { printWindow.focus(); printWindow.print(); }, 250);
   };
   // Export CSV handler
   const handleExportCSV = () => {
@@ -486,7 +486,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Date &amp; Time:</span>
-                <span className="font-mono">{formatDate(selectedReceiptOrder.date)} {selectedReceiptOrder.time}</span>
+                <span className="font-mono">{selectedReceiptOrder.completedAt ? new Date(selectedReceiptOrder.completedAt).toLocaleString('en-IN') : `${formatDate(selectedReceiptOrder.date)} ${selectedReceiptOrder.time}`}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Patient:</span>
@@ -514,7 +514,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
               </div>
 
               <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-bold">
-                <span>Total Amount Paid:</span>
+                <span>Sale Total:</span>
                 <span className="text-teal-900 tabular-nums">
                   {formatCurrency(selectedReceiptOrder.amount)}
                 </span>
