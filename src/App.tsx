@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { RefreshCw, CloudOff, Cloud } from 'lucide-react';
 import {
   ActiveTab,
   Customer,
@@ -14,6 +15,7 @@ import {
   SubscriptionPlanTier,
 } from './types';
 import { StorageService } from './services/storage';
+import { getSyncConfig, saveSyncConfig, syncNow } from './services/sync';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -84,6 +86,71 @@ export default function App() {
 
   // Mobile navigation drawer state
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Offline-first, private sync status. Data remains local when the server is unreachable.
+  const [syncStatus, setSyncStatus] = useState('Not connected');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const runSync = async () => {
+    if (isSyncing) return;
+    if (!getSyncConfig()) {
+      const serverUrl = window.prompt('Enter your private sync server URL (HTTPS recommended, e.g. your Tailscale HTTPS URL):');
+      if (!serverUrl) return;
+      const token = window.prompt('Enter the SYNC_TOKEN configured on your Windows PC (at least 24 characters):');
+      if (!token) return;
+      try {
+        saveSyncConfig(serverUrl, token);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Could not save sync configuration.');
+        return;
+      }
+    }
+    setIsSyncing(true);
+    try {
+      const result = await syncNow();
+      setSyncStatus(result.message);
+      if (result.status === 'conflict') {
+        showToast('Sync conflict: nothing was overwritten. Export a backup before resolving.');
+      } else if (result.status === 'synced') {
+        showToast('Sync check complete.');
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    const refreshFromLocalStorage = () => {
+      setCustomers(StorageService.getCustomers());
+      setStock(StorageService.getStock());
+      setOrders(StorageService.getOrders());
+      setTransactions(StorageService.getTransactions());
+      setReturns(StorageService.getReturns());
+      setLogs(StorageService.getLogs());
+      setSettings(StorageService.getSettings());
+      setStores(StorageService.getStores());
+      setInvoices(StorageService.getInvoices());
+      setActiveStoreId(StorageService.getActiveStoreId());
+    };
+    window.addEventListener('medical-store-sync-applied', refreshFromLocalStorage);
+    return () => window.removeEventListener('medical-store-sync-applied', refreshFromLocalStorage);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const attemptSync = async () => {
+      if (!getSyncConfig() || document.visibilityState === 'hidden') return;
+      const result = await syncNow();
+      if (!cancelled) setSyncStatus(result.message);
+    };
+    const timer = window.setInterval(attemptSync, 30000);
+    window.addEventListener('online', attemptSync);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener('online', attemptSync);
+    };
+  }, []);
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -800,6 +867,21 @@ export default function App() {
         udhaarCount={udhaarCount}
         storesCount={stores.length}
       />
+
+      {/* Private sync control. The app continues working locally if the PC/server is off. */}
+      <div className="fixed bottom-24 md:bottom-5 left-3 md:left-auto md:right-5 z-40 max-w-[min(92vw,360px)]">
+        <button
+          type="button"
+          onClick={runSync}
+          disabled={isSyncing}
+          title="Sync with your private Windows server"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 shadow-lg disabled:opacity-60"
+        >
+          {isSyncing ? <RefreshCw size={16} className="animate-spin" /> : getSyncConfig() ? <Cloud size={16} /> : <CloudOff size={16} />}
+          {isSyncing ? 'Syncing…' : 'Private Sync'}
+        </button>
+        <p className="mt-1 rounded-lg bg-white/95 px-2 py-1 text-[10px] leading-4 text-slate-500 shadow">{syncStatus}</p>
+      </div>
 
       {/* Global Toast Notification */}
       {toastMessage && (
