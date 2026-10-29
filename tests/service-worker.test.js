@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-async function loadServiceWorker({ fetchImpl = async () => new Response('network') } = {}) {
+async function loadServiceWorker({ fetchImpl = async () => new Response('network'), initialCache = {} } = {}) {
   const listeners = new Map();
-  const cacheStore = new Map();
+  const cacheStore = new Map(Object.entries(initialCache));
   const cache = {
     async addAll(urls) {
       for (const url of urls) cacheStore.set(url, new Response(`cached:${url}`));
@@ -82,14 +82,23 @@ test('service worker intercepts same-origin static assets', async () => {
 });
 
 test('offline navigation falls back to the cached app shell', async () => {
-  const { listeners, cacheStore } = await loadServiceWorker();
-  cacheStore.set('/', new Response('cached app shell'));
-  const { listeners: workerListeners } = await loadServiceWorker({
+  const { listeners } = await loadServiceWorker({
+    fetchImpl: async () => { throw new Error('offline'); },
+    initialCache: { '/': new Response('cached app shell') },
+  });
+  const event = makeEvent('https://medical.example/', { mode: 'navigate' });
+  listeners.get('fetch')(event);
+  const response = await event.responsePromise;
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), 'cached app shell');
+});
+
+test('offline navigation without a cached shell explains recovery', async () => {
+  const { listeners } = await loadServiceWorker({
     fetchImpl: async () => { throw new Error('offline'); },
   });
-  // Use the second worker's cache, populated through its mocked cache storage.
   const event = makeEvent('https://medical.example/', { mode: 'navigate' });
-  workerListeners.get('fetch')(event);
+  listeners.get('fetch')(event);
   const response = await event.responsePromise;
   assert.equal(response.status, 503);
   assert.match(await response.text(), /Connect once/i);
