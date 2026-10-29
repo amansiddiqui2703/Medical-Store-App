@@ -1,15 +1,10 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
-import { AuthGate } from './AuthGate';
 import './index.css';
 
-createRoot(document.getElementById('root')!).render(
-  <AuthGate>
-    <App />
-  </AuthGate>
-);
+createRoot(document.getElementById('root')!).render(<App />);
 
-// Installable PWA support only. This worker does not cache data or enable offline billing.
+// Installable PWA shell. Business records stay in this device/browser's local storage.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(error => {
