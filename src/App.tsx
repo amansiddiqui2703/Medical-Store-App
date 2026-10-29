@@ -298,8 +298,8 @@ export default function App() {
       setIsCronRunning(false);
       showToast(
         result.count > 0
-          ? `Automindz 9 AM Cron processed ${result.count} patient reminders!`
-          : '9 AM Cron completed: No patients due today or in 3 days.'
+          ? `Reminder scan found ${result.count} due customers. Messages were not sent; WhatsApp API integration is not configured.`
+          : 'Reminder scan complete: no customers due today. No WhatsApp messages were sent.'
       );
     }, 900);
   };
@@ -509,7 +509,7 @@ export default function App() {
     });
 
     setLogs([...newLogs, ...logs]);
-    showToast(`Dispatched ${selected.length} WhatsApp reminders via Automindz engine.`);
+    showToast(`Prepared ${selected.length} WhatsApp reminder log(s). No messages were sent automatically.`);
   };
 
   // Direct custom WhatsApp send
@@ -522,7 +522,7 @@ export default function App() {
       triggerType: 'custom',
     });
     setLogs([log, ...logs]);
-    showToast(`Message logged for ${name}.`);
+    showToast(`Message draft logged for ${name}. No message was sent automatically.`);
   };
 
   // Data Export / Import / Reset
