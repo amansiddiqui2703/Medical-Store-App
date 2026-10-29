@@ -216,7 +216,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 <input
                   type="number"
                   min="0"
-                  step="1"
+                  step="0.01"
                   value={order.amount || ''}
                   placeholder="₹0"
                   onChange={e => onUpdateAmount(order.id, Number(e.target.value))}
