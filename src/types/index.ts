@@ -67,6 +67,8 @@ export interface Order {
   notes?: string;
   saleItems?: SaleLineItem[];
   completedAt?: string;
+  paymentMethod?: 'Cash' | 'UPI';
+  paymentStatus?: 'Paid' | 'Pending';
 }
 
 export interface CreditTransaction {
@@ -135,6 +137,7 @@ export interface MedicalStore {
   status: 'Active' | 'Trial' | 'Expired';
   createdAt: string;
   subscriptionExpiresAt: string; // YYYY-MM-DD
+  licenseToken?: string;
   reminderDaysBefore: number;
   autoCronEnabled: boolean;
   whatsappAccessToken?: string;

@@ -247,10 +247,11 @@ export class StorageService {
     billingPeriod: 'Monthly' | 'Annual';
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
+    licenseToken?: string;
+    expiresAt?: string;
   }): { updatedStore: MedicalStore; newInvoice: SubscriptionInvoice } {
-    // Paid activation must wait for a verified server-side payment callback.
-    if (params.plan !== 'Trial') {
-      throw new Error('Paid subscription activation is disabled until a verified payment gateway is integrated.');
+    if (params.plan !== 'Trial' && (!params.licenseToken || !params.expiresAt || !Number.isFinite(Date.parse(params.expiresAt)) || Date.parse(params.expiresAt) <= Date.now())) {
+      throw new Error('A valid server-verified subscription license is required before activation.');
     }
     const stores = this.getStores();
     const store = stores.find(s => s.id === params.storeId);
@@ -270,19 +271,19 @@ export class StorageService {
       totalAmount = 0;
       daysToAdd = 14;
     } else if (params.plan === 'Monthly') {
-      totalAmount = 999;
-      baseAmount = Math.round(totalAmount / 1.18);
-      gstAmount = totalAmount - baseAmount;
+      baseAmount = 999;
+      gstAmount = Math.round(baseAmount * 18) / 100;
+      totalAmount = baseAmount + gstAmount;
       daysToAdd = 30;
     } else if (params.plan === 'Annual VIP') {
-      totalAmount = 9999;
-      baseAmount = Math.round(totalAmount / 1.18);
-      gstAmount = totalAmount - baseAmount;
+      baseAmount = 9999;
+      gstAmount = Math.round(baseAmount * 0.18);
+      totalAmount = baseAmount + gstAmount;
       daysToAdd = 365;
     } else if (params.plan === 'Enterprise') {
-      totalAmount = 24999;
-      baseAmount = Math.round(totalAmount / 1.18);
-      gstAmount = totalAmount - baseAmount;
+      baseAmount = 24999;
+      gstAmount = Math.round(baseAmount * 0.18);
+      totalAmount = baseAmount + gstAmount;
       daysToAdd = 365;
     }
 
@@ -297,7 +298,8 @@ export class StorageService {
       ...store,
       plan: params.plan,
       status: params.plan === 'Trial' ? 'Trial' : 'Active',
-      subscriptionExpiresAt: newExpiresAt,
+      subscriptionExpiresAt: params.expiresAt ? params.expiresAt.slice(0, 10) : newExpiresAt,
+      ...(params.licenseToken ? { licenseToken: params.licenseToken } : {}),
     };
 
     const updatedStores = stores.map(s => (s.id === store.id ? updatedStore : s));

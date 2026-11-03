@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, CloudOff, Cloud } from 'lucide-react';
+
 import {
   ActiveTab,
   Customer,
@@ -16,7 +16,7 @@ import {
   SubscriptionPlanTier,
 } from './types';
 import { StorageService } from './services/storage';
-import { getSyncConfig, saveSyncConfig, syncNow } from './services/sync';
+
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -88,71 +88,6 @@ export default function App() {
   // Mobile navigation drawer state
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
-  // Offline-first, private sync status. Data remains local when the server is unreachable.
-  const [syncStatus, setSyncStatus] = useState('Not connected');
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  const runSync = async () => {
-    if (isSyncing) return;
-    if (!getSyncConfig()) {
-      const serverUrl = window.prompt('Enter your private sync server URL (HTTPS recommended, e.g. your Tailscale HTTPS URL):');
-      if (!serverUrl) return;
-      const token = window.prompt('Enter the SYNC_TOKEN configured on your Windows PC (at least 24 characters):');
-      if (!token) return;
-      try {
-        saveSyncConfig(serverUrl, token);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Could not save sync configuration.');
-        return;
-      }
-    }
-    setIsSyncing(true);
-    try {
-      const result = await syncNow();
-      setSyncStatus(result.message);
-      if (result.status === 'conflict') {
-        showToast('Sync conflict: nothing was overwritten. Export a backup before resolving.');
-      } else if (result.status === 'synced') {
-        showToast('Sync check complete.');
-      }
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  useEffect(() => {
-    const refreshFromLocalStorage = () => {
-      setCustomers(StorageService.getCustomers());
-      setStock(StorageService.getStock());
-      setOrders(StorageService.getOrders());
-      setTransactions(StorageService.getTransactions());
-      setReturns(StorageService.getReturns());
-      setLogs(StorageService.getLogs());
-      setSettings(StorageService.getSettings());
-      setStores(StorageService.getStores());
-      setInvoices(StorageService.getInvoices());
-      setActiveStoreId(StorageService.getActiveStoreId());
-    };
-    window.addEventListener('medical-store-sync-applied', refreshFromLocalStorage);
-    return () => window.removeEventListener('medical-store-sync-applied', refreshFromLocalStorage);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const attemptSync = async () => {
-      if (!getSyncConfig() || document.visibilityState === 'hidden') return;
-      const result = await syncNow();
-      if (!cancelled) setSyncStatus(result.message);
-    };
-    const timer = window.setInterval(attemptSync, 30000);
-    window.addEventListener('online', attemptSync);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-      window.removeEventListener('online', attemptSync);
-    };
-  }, []);
-
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -162,6 +97,46 @@ export default function App() {
       setToastMessage(null);
     }, 3500);
   };
+  // Revalidate locally stored paid licenses when the app starts; pharmacy records remain on this device.
+  useEffect(() => {
+    let cancelled = false;
+    const revalidateLicenses = async () => {
+      const localStores = StorageService.getStores();
+      const licensedStores = localStores.filter(store => Boolean(store.licenseToken));
+      if (licensedStores.length === 0) return;
+      const checked = await Promise.all(licensedStores.map(async store => {
+        try {
+          const response = await fetch('/api/license/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ licenseToken: store.licenseToken }),
+          });
+          const data = await response.json();
+          if (response.status === 403 || (response.ok && data.valid === false)) return { id: store.id, invalid: true as const };
+          if (!response.ok || !data.valid || !data.expiresAt) return { id: store.id, invalid: false as const };
+          if (data.storeId !== store.id) return { id: store.id, invalid: true as const };
+          const plan: SubscriptionPlanTier | null = data.plan === 'monthly' ? 'Monthly' : data.plan === 'annual_vip' ? 'Annual VIP' : data.plan === 'enterprise' ? 'Enterprise' : null;
+          if (!plan) return { id: store.id, invalid: true as const };
+          return { id: store.id, invalid: false as const, plan, expiresAt: String(data.expiresAt).slice(0, 10) };
+        } catch {
+          // Temporary network failure does not erase local data or falsely revoke a license.
+          return { id: store.id, invalid: false as const };
+        }
+      }));
+      if (cancelled) return;
+      const updated = localStores.map(store => {
+        const result = checked.find(item => item.id === store.id);
+        if (!result) return store;
+        if (result.invalid) return { ...store, status: 'Expired' as const };
+        if ('plan' in result && result.plan && result.expiresAt) return { ...store, plan: result.plan, status: 'Active' as const, subscriptionExpiresAt: result.expiresAt };
+        return store;
+      });
+      StorageService.saveStores(updated);
+      setStores(updated);
+    };
+    void revalidateLicenses();
+    return () => { cancelled = true; };
+  }, []);
+
 
   const handleOpenSubscribeModal = (plan: SubscriptionPlanTier = 'Annual VIP', targetStoreId?: string) => {
     setSubscribeModalPlan(plan);
@@ -175,6 +150,8 @@ export default function App() {
     billingPeriod: 'Monthly' | 'Annual';
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
+    licenseToken?: string;
+    expiresAt?: string;
   }) => {
     try {
       const { updatedStore, newInvoice } = StorageService.activateSubscription(params);
@@ -338,7 +315,7 @@ export default function App() {
     setLogs(prev => [log, ...prev]);
   };
 
-  const handleCompleteSale = (orderId: number, items: SaleLineItem[]): boolean => {
+  const handleCompleteSale = (orderId: number, items: SaleLineItem[], payment: { method: 'Cash' | 'UPI'; status: 'Paid' }): boolean => {
     const order = orders.find(item => item.id === orderId);
     if (!order || order.status === 'Completed' || order.status === 'Cancelled') {
       showToast('This order is no longer available for billing.');
@@ -375,7 +352,7 @@ export default function App() {
       return qty ? { ...batch, qty: batch.qty - qty } : batch;
     }));
     setOrders(prev => prev.map(item => item.id === orderId
-      ? { ...item, status: 'Completed', amount: total, saleItems: items.map(line => ({ ...line })), completedAt }
+      ? { ...item, status: 'Completed', amount: total, saleItems: items.map(line => ({ ...line })), paymentMethod: payment.method, paymentStatus: payment.status, completedAt }
       : item
     ));
     showToast('Bill saved. Batch-wise stock deducted. Total: ₹' + total.toFixed(2));
@@ -621,6 +598,7 @@ export default function App() {
       returns,
       logs,
       invoices,
+      upiQr: localStorage.getItem('medical_store_upi_qr_v1') || '',
       madeBy: 'M.S. Medical Store',
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -678,6 +656,8 @@ export default function App() {
           StorageService.setActiveStoreId(data.activeStoreId);
         }
         setInvoices(Array.isArray(data.invoices) ? data.invoices as SubscriptionInvoice[] : []);
+        if (typeof data.upiQr === 'string' && data.upiQr.startsWith('data:image/')) localStorage.setItem('medical_store_upi_qr_v1', data.upiQr);
+        else localStorage.removeItem('medical_store_upi_qr_v1');
         showToast('Backup restored locally. Verify stock, balances and invoice totals before use.');
       } catch (err) {
         alert(err instanceof Error ? err.message : 'Invalid backup JSON file.');
@@ -695,6 +675,7 @@ export default function App() {
   const handleResetData = () => {
     if (window.confirm('Permanently clear all local store records on this device? Export a backup first. This cannot be undone.')) {
       StorageService.resetToDefaults();
+      localStorage.removeItem('medical_store_upi_qr_v1');
       setCustomers(StorageService.getCustomers());
       setStock(StorageService.getStock());
       setOrders(StorageService.getOrders());
@@ -991,21 +972,6 @@ export default function App() {
         udhaarCount={udhaarCount}
         storesCount={stores.length}
       />
-
-      {/* Private sync control. The app continues working locally if the PC/server is off. */}
-      <div className="fixed bottom-24 md:bottom-5 left-3 md:left-auto md:right-5 z-40 max-w-[min(92vw,360px)]">
-        <button
-          type="button"
-          onClick={runSync}
-          disabled={isSyncing}
-          title="Sync with your private Windows server"
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 shadow-lg disabled:opacity-60"
-        >
-          {isSyncing ? <RefreshCw size={16} className="animate-spin" /> : getSyncConfig() ? <Cloud size={16} /> : <CloudOff size={16} />}
-          {isSyncing ? 'Syncing…' : 'Private Sync'}
-        </button>
-        <p className="mt-1 rounded-lg bg-white/95 px-2 py-1 text-[10px] leading-4 text-slate-500 shadow">{syncStatus}</p>
-      </div>
 
       {/* Global Toast Notification */}
       {toastMessage && (

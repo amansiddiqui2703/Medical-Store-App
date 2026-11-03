@@ -18,7 +18,7 @@ interface OrdersViewProps {
   orders: Order[];
   stock: StockItem[];
   settings: StoreSettings;
-  onCompleteSale: (orderId: number, items: SaleLineItem[]) => boolean;
+  onCompleteSale: (orderId: number, items: SaleLineItem[], payment: { method: 'Cash' | 'UPI'; status: 'Paid' }) => boolean;
   onOpenNewOrder: () => void;
   onViewPrescription: (order: Order) => void;
   onUpdateStatus: (orderId: number, newStatus: OrderStatus) => void;
@@ -45,15 +45,24 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const [billRows, setBillRows] = useState<Array<{ stockId: number; qty: number }>>([]);
   const [billError, setBillError] = useState('');
   const [isSubmittingBill, setIsSubmittingBill] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'UPI'>('Cash');
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [upiQr, setUpiQr] = useState<string>(() => localStorage.getItem('medical_store_upi_qr_v1') || '');
+  const [qrError, setQrError] = useState('');
   const today = new Date().toISOString().slice(0, 10);
   const sellableStock = stock.filter(item => item.qty > 0 && item.expiry >= today);
   const openBilling = (order: Order) => {
     setBillingOrder(order);
     setBillRows([{ stockId: sellableStock[0]?.id || 0, qty: 1 }]);
     setBillError('');
+    setPaymentMethod('Cash');
+    setPaymentConfirmed(false);
+    setQrError('');
   };
   const submitBill = () => {
     if (isSubmittingBill || !billingOrder || billRows.length === 0) return;
+    if (!paymentConfirmed) { setBillError('Confirm that the customer payment has actually been received before saving the sale.'); return; }
+    if (paymentMethod === 'UPI' && !upiQr) { setBillError('Upload your store UPI QR in this bill screen or choose Cash.'); return; }
     setIsSubmittingBill(true);
     try {
       const lines: SaleLineItem[] = [];
@@ -71,7 +80,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         const item = sellableStock.find(s => s.id === stockId);
         if (!item || qty > item.qty) { setBillError('Combined quantities exceed available stock for a selected batch.'); return; }
       }
-      const completed = onCompleteSale(billingOrder.id, lines);
+      const completed = onCompleteSale(billingOrder.id, lines, { method: paymentMethod, status: 'Paid' });
       if (!completed) return;
       setBillingOrder(null);
       setBillRows([]);
@@ -330,6 +339,22 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             })}
             <button type="button" onClick={() => setBillRows(prev => [...prev, { stockId: sellableStock[0]?.id || 0, qty: 1 }])} disabled={sellableStock.length === 0} className="mt-3 rounded-lg border border-teal-700 px-3 py-2 text-xs font-semibold text-teal-800">+ Add medicine</button>
             <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm font-bold flex justify-between"><span>Total (MRP)</span><span>₹{billRows.reduce((sum, row) => sum + (sellableStock.find(s => s.id === row.stockId)?.mrp || 0) * (Number.isFinite(row.qty) ? row.qty : 0), 0).toFixed(2)}</span></div>
+            <div className="mt-4 rounded-xl border border-slate-200 p-3 space-y-3">
+              <p className="text-xs font-bold text-slate-900">Customer payment</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setPaymentMethod('Cash'); setPaymentConfirmed(false); }} className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold ${paymentMethod === 'Cash' ? 'border-teal-700 bg-teal-50 text-teal-900' : 'border-slate-300'}`}>Cash</button>
+                <button type="button" onClick={() => { setPaymentMethod('UPI'); setPaymentConfirmed(false); }} className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold ${paymentMethod === 'UPI' ? 'border-teal-700 bg-teal-50 text-teal-900' : 'border-slate-300'}`}>UPI QR</button>
+              </div>
+              {paymentMethod === 'UPI' && <div className="space-y-2">
+                <label className="block text-xs font-medium text-slate-700">Store UPI QR image (saved only on this device)
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="mt-1 block w-full text-xs" onChange={e => { const file = e.target.files?.[0]; if (!file) return; if (file.size > 1500000 || !file.type.startsWith('image/')) { setQrError('Choose a PNG/JPG/WebP image smaller than 1.5 MB.'); e.target.value = ''; return; } const reader = new FileReader(); reader.onload = () => { const value = String(reader.result || ''); try { localStorage.setItem('medical_store_upi_qr_v1', value); setUpiQr(value); setPaymentConfirmed(false); setQrError(''); } catch { setQrError('Could not save QR image. Use an image under 1 MB.'); } }; reader.readAsDataURL(file); }} />
+                </label>
+                {upiQr && <img src={upiQr} alt="Store UPI QR code" className="mx-auto max-h-48 w-auto rounded-lg border border-slate-200 bg-white p-2" />}
+                {qrError && <p role="alert" className="text-xs text-rose-700">{qrError}</p>}
+                <p className="text-[11px] text-slate-500">Show this QR to the customer. Check your own UPI app/bank before confirming; a screenshot is not proof of payment.</p>
+              </div>}
+              <label className="flex items-start gap-2 text-xs text-slate-700"><input type="checkbox" checked={paymentConfirmed} onChange={e => setPaymentConfirmed(e.target.checked)} className="mt-0.5" /><span>I have independently verified that the full amount was received by {paymentMethod === 'Cash' ? 'cash' : 'UPI'}.</span></label>
+            </div>
             {billError && <p role="alert" className="mt-3 text-xs text-rose-700">{billError}</p>}
             <p className="mt-2 text-[11px] text-amber-700">Confirm only after checking the prescription and exact medicines. Uses listed MRP; GST invoice compliance and discounts are not calculated here.</p>
             <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setBillingOrder(null)} className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold">Cancel</button><button type="button" onClick={submitBill} disabled={isSubmittingBill} className="rounded-lg bg-teal-700 px-4 py-2 text-xs font-semibold text-white">Confirm Bill &amp; Deduct Stock</button></div>

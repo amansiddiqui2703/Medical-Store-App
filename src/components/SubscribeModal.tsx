@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Check, CreditCard, ShieldCheck } from 'lucide-react';
 import { SubscriptionPlanTier, MedicalStore } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -15,263 +15,108 @@ interface SubscribeModalProps {
     billingPeriod: 'Monthly' | 'Annual';
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
+    licenseToken?: string;
+    expiresAt?: string;
   }) => void;
 }
 
-export const SubscribeModal: React.FC<SubscribeModalProps> = ({
-  isOpen,
-  stores,
-  activeStoreId,
-  initialSelectedPlan = 'Annual VIP',
-  onClose,
-  onSubmit,
-}) => {
-  const [selectedStoreId, setSelectedStoreId] = useState<string>(activeStoreId || (stores[0]?.id || ''));
+const plans: Record<SubscriptionPlanTier, { name: string; price: number; period: 'Monthly' | 'Annual'; features: string[] }> = {
+  Trial: { name: 'Free Trial', price: 0, period: 'Monthly', features: ['25 chronic patient profiles', 'Manual click-to-chat links', 'Standard expiry tracker'] },
+  Monthly: { name: 'Pro Monthly', price: 999, period: 'Monthly', features: ['Unlimited chronic patients', 'WhatsApp reminders', 'Prescription zoom desk', 'Udhaar ledger'] },
+  'Annual VIP': { name: 'Annual VIP', price: 9999, period: 'Annual', features: ['Everything in Pro Monthly', 'Custom store branding', 'Priority support', 'Distributor return sheet'] },
+  Enterprise: { name: 'Enterprise Multi-Store', price: 24999, period: 'Annual', features: ['Everything in Annual VIP', 'Up to 5 branches', 'Multi-counter logins', 'ERP integration assistance'] },
+};
+
+export const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, stores, activeStoreId, initialSelectedPlan = 'Annual VIP', onClose, onSubmit }) => {
+  const [selectedStoreId, setSelectedStoreId] = useState(activeStoreId || stores[0]?.id || '');
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanTier>(initialSelectedPlan);
-  const [paymentMethod] = useState<'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer'>('UPI');
+  const [utr, setUtr] = useState('');
+  const [licenseToken, setLicenseToken] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedStoreId(activeStoreId || stores[0]?.id || '');
+    setSelectedPlan(initialSelectedPlan);
+    setUtr('');
+    setLicenseToken('');
+    setError('');
+  }, [isOpen, activeStoreId, initialSelectedPlan, stores]);
 
   if (!isOpen) return null;
+  const plan = plans[selectedPlan];
+  const gst = Math.round(plan.price * 18) / 100;
+  const total = plan.price + gst;
+  const upiId = (import.meta as any).env?.VITE_SUBSCRIPTION_UPI_ID || 'amanriyazsiddiqui.12@oksbi';
+  const store = stores.find(s => s.id === selectedStoreId);
+  const upiLink = upiId && plan.price > 0
+    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('Automindz Digital Labs')}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Medical Store ' + (store?.name || '') + ' ' + selectedPlan)}`
+    : '';
 
-  // Pricing matrix
-  const planDetails: Record<SubscriptionPlanTier, {
-    name: string;
-    price: number;
-    billingPeriod: 'Monthly' | 'Annual';
-    cadenceText: string;
-    highlight?: string;
-    features: string[];
-  }> = {
-    'Trial': {
-      name: 'Free Trial',
-      price: 0,
-      billingPeriod: 'Monthly',
-      cadenceText: '14 Days Free Demo',
-      features: ['25 chronic patient profiles', 'Manual click-to-chat links', 'Standard expiry tracker'],
-    },
-    'Monthly': {
-      name: 'Pro Monthly',
-      price: 999,
-      billingPeriod: 'Monthly',
-      cadenceText: '₹999 / month + GST',
-      features: [
-        'Unlimited chronic patients',
-        '9:00 AM Automated WhatsApp cron reminders',
-        'Prescription zoom desk & verification',
-        'Udhaar ledger with WhatsApp balance reminders',
-      ],
-    },
-    'Annual VIP': {
-      name: 'Annual VIP',
-      price: 9999,
-      billingPeriod: 'Annual',
-      cadenceText: '₹9,999 / year + GST',
-      highlight: 'RECOMMENDED · SAVE 20%',
-      features: [
-        'Everything in Pro Monthly',
-        'Save ₹1,989 vs monthly renewals',
-        'Custom store branding on WhatsApp messages',
-        'Priority Meta WhatsApp Cloud API gateway setup',
-        'Distributor return sheet generator (CSV & Print)',
-        'Dedicated account manager support by Automindz',
-      ],
-    },
-    'Enterprise': {
-      name: 'Enterprise Multi-Store',
-      price: 24999,
-      billingPeriod: 'Annual',
-      cadenceText: '₹24,999 / year + GST',
-      highlight: 'MULTI-BRANCH CHAINS',
-      features: [
-        'Everything in Annual VIP',
-        'Up to 5 pharmacy branches supported',
-        'Multi-counter pharmacist logins',
-        'Consolidated stock expiry return coordinator',
-        'Custom ERP / billing software integration assist',
-      ],
-    },
-  };
-
-  const currentPlanInfo = planDetails[selectedPlan];
-  // Calculate preview-only values in render scope; paid checkout remains disabled.
-  const baseAmount: number = currentPlanInfo.price;
-  const gstAmount: number = Math.round(baseAmount * 0.18 * 100) / 100;
-  const totalAmount: number = Math.round((baseAmount + gstAmount) * 100) / 100;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedPlan !== 'Trial') {
-      window.alert('Paid-plan checkout is not connected to a verified payment gateway yet. No payment has been taken. Please use the free trial for now.');
+    if (busy || !selectedStoreId) return;
+    if (selectedPlan === 'Trial') {
+      onSubmit({ storeId: selectedStoreId, plan: 'Trial', billingPeriod: 'Monthly', paymentMethod: 'UPI', transactionRef: 'TRIAL-ACTIVATION' });
       return;
     }
-    onSubmit({
-      storeId: selectedStoreId,
-      plan: 'Trial',
-      billingPeriod: 'Monthly',
-      paymentMethod,
-      transactionRef: 'TRIAL-ACTIVATION',
-    });
+    if (!utr.trim() || !licenseToken.trim()) {
+      setError('Payment UTR aur admin se mila activation code dono enter karo.');
+      return;
+    }
+    setBusy(true); setError('');
+    try {
+      const response = await fetch('/api/license/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseToken: licenseToken.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.valid || data.storeId !== selectedStoreId || data.plan !== (selectedPlan === 'Monthly' ? 'monthly' : selectedPlan === 'Annual VIP' ? 'annual_vip' : 'enterprise')) {
+        throw new Error('Activation code invalid hai, expire ho gaya hai, ya kisi doosre store/plan ka hai.');
+      }
+      onSubmit({ storeId: selectedStoreId, plan: selectedPlan, billingPeriod: plan.period, paymentMethod: 'UPI', transactionRef: utr.trim(), licenseToken: licenseToken.trim(), expiresAt: data.expiresAt });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'License verify nahi ho saka. Internet check karke dobara try karo.');
+    } finally { setBusy(false); }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-3 sm:my-6 animate-in fade-in zoom-in-95">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-900 text-white">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-teal-500/20 text-teal-300">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-xs sm:text-sm">Automindz SaaS Licensing & Subscription</h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">Activate or extend software license for medical stores</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Target Store Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Select Medical Store to License / Renew
-            </label>
-            <div className="relative">
-              <select
-                value={selectedStoreId}
-                onChange={e => setSelectedStoreId(e.target.value)}
-                className="w-full text-xs font-medium text-slate-900 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-teal-700 focus:outline-none"
-              >
-                {stores.map(st => (
-                  <option key={st.id} value={st.id}>
-                    {st.name} ({st.city}) — Current: {st.plan} (Expires: {st.subscriptionExpiresAt})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Plan Selection Tiers */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              Select Subscription Plan
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-              {(Object.keys(planDetails) as SubscriptionPlanTier[]).map(planKey => {
-                const plan = planDetails[planKey];
-                const isSelected = selectedPlan === planKey;
-                return (
-                  <div
-                    key={planKey}
-                    onClick={() => setSelectedPlan(planKey)}
-                    className={`relative p-3.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-teal-700 bg-teal-50/50 shadow-xs ring-1 ring-teal-700'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div>
-                      {plan.highlight && (
-                        <span className="block text-[9px] font-extrabold uppercase tracking-wider text-teal-800 mb-1">
-                          {plan.highlight}
-                        </span>
-                      )}
-                      <h4 className="text-xs font-bold text-slate-900">{plan.name}</h4>
-                      <p className="text-sm font-extrabold text-slate-950 mt-1 tabular-nums">
-                        {plan.price === 0 ? 'Free' : formatCurrency(plan.price)}
-                      </p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{plan.cadenceText}</p>
-                    </div>
-
-                    <div className="mt-3 pt-2 border-t border-slate-200/80">
-                      <div className="flex items-center gap-1 text-[11px] font-semibold text-teal-800">
-                        {isSelected ? (
-                          <>
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Selected</span>
-                          </>
-                        ) : (
-                          <span className="text-slate-400 font-normal">Click to select</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Pricing Breakdown & Features Box */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-            <div>
-              <p className="font-semibold text-slate-900 mb-2">Included in {currentPlanInfo.name}:</p>
-              <ul className="space-y-1.5 text-slate-600 text-[11px]">
-                {currentPlanInfo.features.map((feat, idx) => (
-                  <li key={idx} className="flex items-start gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-teal-700 shrink-0 mt-0.5" />
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="space-y-2 border-t md:border-t-0 md:border-l border-slate-200 md:pl-4 pt-3 md:pt-0">
-              <p className="font-semibold text-slate-900">Tax Invoice Summary (GST 18%):</p>
-              <div className="space-y-1 text-slate-600 text-[11px]">
-                <div className="flex justify-between">
-                  <span>Base Software License:</span>
-                  <span className="tabular-nums font-medium">{formatCurrency(baseAmount)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>GST @ 18% (CGST 9% + SGST 9%):</span>
-                  <span className="tabular-nums font-medium">{formatCurrency(gstAmount)}</span>
-                </div>
-                <div className="pt-2 border-t border-slate-300 flex justify-between font-bold text-slate-950 text-xs">
-                  <span>Total Amount Payable:</span>
-                  <span className="tabular-nums text-teal-800 text-sm font-extrabold">
-                    {formatCurrency(totalAmount)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {totalAmount > 0 && (
-            <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950">
-              <p className="font-bold">Paid checkout is not available yet</p>
-              <p className="mt-1">No verified payment gateway is connected. Do not transfer money using placeholder details. Paid plans cannot be activated from this screen; the free trial remains available.</p>
-            </div>
-          )}
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <ShieldCheck className="w-4 h-4 text-teal-700" />
-              <span>Free trial only until secure checkout is configured</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={selectedPlan !== 'Trial'}
-                className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Paid checkout unavailable'}
-              </button>
-            </div>
-          </div>
-        </form>
+  return <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 overflow-y-auto">
+    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl my-4 overflow-hidden">
+      <div className="flex items-center justify-between p-4 bg-slate-900 text-white">
+        <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-teal-300" /><div><h3 className="font-semibold text-sm">Subscription & License</h3><p className="text-xs text-slate-300">Manual UPI payment · No payment gateway</p></div></div>
+        <button type="button" onClick={onClose} aria-label="Close"><X className="w-5 h-5" /></button>
       </div>
+      <form onSubmit={submit} className="p-4 sm:p-6 space-y-4">
+        <label className="block text-xs font-semibold text-slate-700">Medical store
+          <select className="mt-1 w-full border rounded-lg p-2.5" value={selectedStoreId} onChange={e => setSelectedStoreId(e.target.value)}>
+            {stores.map(s => <option key={s.id} value={s.id}>{s.name} ({s.city})</option>)}
+          </select>
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {(Object.keys(plans) as SubscriptionPlanTier[]).map(key => <button type="button" key={key} onClick={() => setSelectedPlan(key)} className={`rounded-xl border p-3 text-left ${selectedPlan === key ? 'border-teal-700 bg-teal-50' : 'border-slate-200'}`}>
+            <span className="block text-xs font-bold">{plans[key].name}</span><span className="block mt-1 text-sm font-extrabold">{plans[key].price ? formatCurrency(plans[key].price) : 'Free'}</span>
+          </button>)}
+        </div>
+        <div className="rounded-xl bg-slate-50 border p-4 text-sm space-y-2">
+          <div className="flex justify-between"><span>Plan amount</span><b>{formatCurrency(plan.price)}</b></div>
+          {plan.price > 0 && <div className="flex justify-between"><span>GST estimate (18%)</span><b>{formatCurrency(gst)}</b></div>}
+          <div className="flex justify-between border-t pt-2 font-bold"><span>Total</span><b>{formatCurrency(total)}</b></div>
+          <ul className="text-xs text-slate-600 list-disc pl-4">{plan.features.map(f => <li key={f}>{f}</li>)}</ul>
+        </div>
+        {plan.price > 0 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3 text-sm">
+          <b>Manual UPI payment</b>
+          {upiLink ? <a href={upiLink} className="inline-flex rounded-lg bg-teal-700 text-white px-4 py-2 font-semibold">Pay {formatCurrency(total)} using UPI app</a> : <p className="text-amber-900">UPI payment details abhi configure nahi hain. Payment karne se pehle store administrator se official UPI ID/QR lo.</p>}
+          <p className="text-xs text-slate-700">Payment ke baad bank/UPI app mein successful transaction verify karke UTR enter karo. Screenshot ko payment proof nahi maana jayega. Admin payment verify karke activation code share karega.</p>
+          <label className="block text-xs font-semibold">UPI UTR / Transaction ID<input className="mt-1 w-full rounded-lg border p-2.5" value={utr} onChange={e => setUtr(e.target.value)} placeholder="12-digit / transaction reference" /></label>
+          <label className="block text-xs font-semibold">Admin activation code<input className="mt-1 w-full rounded-lg border p-2.5" value={licenseToken} onChange={e => setLicenseToken(e.target.value)} placeholder="Paste signed license code" /></label>
+        </div>}
+        {error && <p role="alert" className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">{error}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <span className="flex items-center gap-1 text-xs text-slate-500"><ShieldCheck className="w-4 h-4 text-teal-700" /> Server-signed license validation</span>
+          <div className="flex gap-2"><button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm border">Cancel</button><button type="submit" disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold bg-teal-700 text-white disabled:opacity-50">{busy ? 'Verifying…' : selectedPlan === 'Trial' ? 'Activate free trial' : 'Verify & activate'}</button></div>
+        </div>
+      </form>
     </div>
-  );
+  </div>;
 };
