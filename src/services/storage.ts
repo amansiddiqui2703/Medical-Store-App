@@ -272,7 +272,7 @@ export class StorageService {
       daysToAdd = 14;
     } else if (params.plan === 'Monthly') {
       baseAmount = 999;
-      gstAmount = Math.round(baseAmount * 0.18);
+      gstAmount = Math.round(baseAmount * 18) / 100;
       totalAmount = baseAmount + gstAmount;
       daysToAdd = 30;
     } else if (params.plan === 'Annual VIP') {
