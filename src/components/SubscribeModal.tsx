@@ -48,7 +48,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, stores, 
   const plan = plans[selectedPlan];
   const gst = Math.round(plan.price * 18) / 100;
   const total = plan.price + gst;
-  const upiId = (import.meta as any).env?.VITE_SUBSCRIPTION_UPI_ID || '';
+  const upiId = (import.meta as any).env?.VITE_SUBSCRIPTION_UPI_ID || 'amanriyazsiddiqui.12@oksbi';
   const store = stores.find(s => s.id === selectedStoreId);
   const upiLink = upiId && plan.price > 0
     ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('Automindz Digital Labs')}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Medical Store ' + (store?.name || '') + ' ' + selectedPlan)}`
