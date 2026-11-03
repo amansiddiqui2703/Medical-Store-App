@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Check, CreditCard, ShieldCheck } from 'lucide-react';
 import { SubscriptionPlanTier, MedicalStore } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -33,6 +33,12 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const [paymentMethod] = useState<'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer'>('UPI');
   const [isPaying, setIsPaying] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedStoreId(activeStoreId || stores[0]?.id || '');
+    setSelectedPlan(initialSelectedPlan);
+    setCheckoutError('');
+  }, [isOpen, activeStoreId, initialSelectedPlan]);
 
   if (!isOpen) return null;
 
