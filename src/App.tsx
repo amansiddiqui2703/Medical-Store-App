@@ -110,6 +110,8 @@ export default function App() {
     billingPeriod: 'Monthly' | 'Annual';
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
+    licenseToken?: string;
+    expiresAt?: string;
   }) => {
     try {
       const { updatedStore, newInvoice } = StorageService.activateSubscription(params);
