@@ -24,6 +24,7 @@ export default async function handler(req, res) {
       order.notes?.product !== 'ms-medical-store' ||
       typeof order.notes?.store_name !== 'string' ||
       !order.notes.store_name.trim() ||
+      typeof order.notes.store_id !== 'string' || !order.notes.store_id.trim() ||
       !Number.isInteger(payment.created_at) || payment.created_at <= 0 || payment.created_at > Math.floor(Date.now() / 1000) + 300
     ) {
       return json(res, 409, { error: 'Payment is not captured for the expected order and amount. No license was issued.' });
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
 
     const licenseToken = issueLicense({
       storeName: order.notes.store_name,
+      storeId: order.notes.store_id,
       plan,
       paymentId,
       days: selected.days,
