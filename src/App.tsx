@@ -97,6 +97,45 @@ export default function App() {
       setToastMessage(null);
     }, 3500);
   };
+  // Revalidate locally stored paid licenses when the app starts; pharmacy records remain on this device.
+  useEffect(() => {
+    let cancelled = false;
+    const revalidateLicenses = async () => {
+      const localStores = StorageService.getStores();
+      const licensedStores = localStores.filter(store => Boolean(store.licenseToken));
+      if (licensedStores.length === 0) return;
+      const checked = await Promise.all(licensedStores.map(async store => {
+        try {
+          const response = await fetch('/api/license/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ licenseToken: store.licenseToken }),
+          });
+          const data = await response.json();
+          if (response.status === 403 || (response.ok && data.valid === false)) return { id: store.id, invalid: true as const };
+          if (!response.ok || !data.valid || !data.expiresAt) return { id: store.id, invalid: false as const };
+          const plan = data.plan === 'monthly' ? 'Monthly' : data.plan === 'annual_vip' ? 'Annual VIP' : data.plan === 'enterprise' ? 'Enterprise' : null;
+          if (!plan) return { id: store.id, invalid: true as const };
+          return { id: store.id, invalid: false as const, plan, expiresAt: String(data.expiresAt).slice(0, 10) };
+        } catch {
+          // Temporary network failure does not erase local data or falsely revoke a license.
+          return { id: store.id, invalid: false as const };
+        }
+      }));
+      if (cancelled) return;
+      const updated = localStores.map(store => {
+        const result = checked.find(item => item.id === store.id);
+        if (!result) return store;
+        if (result.invalid) return { ...store, status: 'Expired' as const };
+        if ('plan' in result && result.plan && result.expiresAt) return { ...store, plan: result.plan, status: 'Active' as const, subscriptionExpiresAt: result.expiresAt };
+        return store;
+      });
+      StorageService.saveStores(updated);
+      setStores(updated);
+    };
+    void revalidateLicenses();
+    return () => { cancelled = true; };
+  }, []);
+
 
   const handleOpenSubscribeModal = (plan: SubscriptionPlanTier = 'Annual VIP', targetStoreId?: string) => {
     setSubscribeModalPlan(plan);
