@@ -39,11 +39,12 @@ export function verifyCheckoutSignature(orderId, paymentId, signature) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-export function issueLicense({ storeName, plan, paymentId, days, paidAt }) {
+export function issueLicense({ storeName, storeId, plan, paymentId, days, paidAt }) {
   const issuedAt = Number.isInteger(paidAt) && paidAt > 0 ? paidAt : Math.floor(Date.now() / 1000);
   const payload = {
     iss: 'ms-medical-store',
     store: storeName,
+    storeId,
     plan,
     paymentId,
     iat: issuedAt,
@@ -64,7 +65,7 @@ export function verifyLicense(token) {
   if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
   try {
     const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
-    if (payload.iss !== 'ms-medical-store' || !payload.store || !PLANS[payload.plan] || !Number.isInteger(payload.exp) || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    if (payload.iss !== 'ms-medical-store' || !payload.store || !payload.storeId || !PLANS[payload.plan] || !Number.isInteger(payload.exp) || payload.exp <= Math.floor(Date.now() / 1000)) return null;
     return payload;
   } catch { return null; }
 }
