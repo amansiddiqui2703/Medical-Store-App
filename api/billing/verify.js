@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       licenseToken,
       storeName: order.notes.store_name,
       plan,
-      expiresAt: new Date((Math.floor(Date.now() / 1000) + selected.days * 86400) * 1000).toISOString(),
+      expiresAt: new Date((payment.created_at + selected.days * 86400) * 1000).toISOString(),
     });
   } catch (error) {
     console.error('Payment verification failed:', error.message);
