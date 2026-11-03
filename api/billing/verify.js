@@ -23,7 +23,8 @@ export default async function handler(req, res) {
       payment.amount !== expectedAmount ||
       order.notes?.product !== 'ms-medical-store' ||
       typeof order.notes?.store_name !== 'string' ||
-      !order.notes.store_name.trim()
+      !order.notes.store_name.trim() ||
+      !Number.isInteger(payment.created_at) || payment.created_at <= 0 || payment.created_at > Math.floor(Date.now() / 1000) + 300
     ) {
       return json(res, 409, { error: 'Payment is not captured for the expected order and amount. No license was issued.' });
     }
@@ -33,6 +34,7 @@ export default async function handler(req, res) {
       plan,
       paymentId,
       days: selected.days,
+      paidAt: payment.created_at,
     });
     return json(res, 200, {
       ok: true,
