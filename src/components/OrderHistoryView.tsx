@@ -113,6 +113,8 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
       'Fulfillment Date',
       'Fulfillment Time',
       'Billed Amount (INR)',
+      'Payment Method',
+      'Payment Status',
       'Prescription Attached',
       'Verified by Pharmacist',
       'Notes',
@@ -126,6 +128,8 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
       orderActivityDate(o),
       o.completedAt ? new Date(o.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : o.time,
       o.amount,
+      o.paymentMethod || 'Not recorded',
+      o.paymentStatus || 'Not recorded',
       o.prescriptionUrl ? 'YES' : 'NO',
       o.isVerified ? 'YES' : 'NO',
       o.notes || '',
@@ -515,6 +519,14 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                 )}
               </div>
 
+              <div className="pt-2 border-t border-dashed border-slate-200 flex justify-between">
+                <span className="text-slate-500">Payment method:</span>
+                <span className="font-semibold">{selectedReceiptOrder.paymentMethod || 'Not recorded'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payment status:</span>
+                <span className="font-semibold">{selectedReceiptOrder.paymentStatus || 'Not recorded'}</span>
+              </div>
               <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-bold">
                 <span>Sale Total:</span>
                 <span className="text-teal-900 tabular-nums">
