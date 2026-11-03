@@ -273,7 +273,7 @@ export default function App() {
     setLogs(prev => [log, ...prev]);
   };
 
-  const handleCompleteSale = (orderId: number, items: SaleLineItem[]): boolean => {
+  const handleCompleteSale = (orderId: number, items: SaleLineItem[], payment: { method: 'Cash' | 'UPI'; status: 'Paid' }): boolean => {
     const order = orders.find(item => item.id === orderId);
     if (!order || order.status === 'Completed' || order.status === 'Cancelled') {
       showToast('This order is no longer available for billing.');
@@ -310,7 +310,7 @@ export default function App() {
       return qty ? { ...batch, qty: batch.qty - qty } : batch;
     }));
     setOrders(prev => prev.map(item => item.id === orderId
-      ? { ...item, status: 'Completed', amount: total, saleItems: items.map(line => ({ ...line })), completedAt }
+      ? { ...item, status: 'Completed', amount: total, saleItems: items.map(line => ({ ...line })), paymentMethod: payment.method, paymentStatus: payment.status, completedAt }
       : item
     ));
     showToast('Bill saved. Batch-wise stock deducted. Total: ₹' + total.toFixed(2));
