@@ -9,6 +9,7 @@ export default async function handler(req, res) {
     return json(res, 200, {
       valid: true,
       storeName: payload.store,
+      storeId: payload.storeId,
       plan: payload.plan,
       expiresAt: new Date(payload.exp * 1000).toISOString(),
     });
