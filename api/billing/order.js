@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { json, PLANS, razorpay, requiredEnv } from '../_lib/billing.js';
 
 export default async function handler(req, res) {
