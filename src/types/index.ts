@@ -137,6 +137,7 @@ export interface MedicalStore {
   status: 'Active' | 'Trial' | 'Expired';
   createdAt: string;
   subscriptionExpiresAt: string; // YYYY-MM-DD
+  licenseToken?: string;
   reminderDaysBefore: number;
   autoCronEnabled: boolean;
   whatsappAccessToken?: string;
