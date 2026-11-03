@@ -15,6 +15,8 @@ interface SubscribeModalProps {
     billingPeriod: 'Monthly' | 'Annual';
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
+    licenseToken?: string;
+    expiresAt?: string;
   }) => void;
 }
 
@@ -29,6 +31,8 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const [selectedStoreId, setSelectedStoreId] = useState<string>(activeStoreId || (stores[0]?.id || ''));
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanTier>(initialSelectedPlan);
   const [paymentMethod] = useState<'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer'>('UPI');
+  const [isPaying, setIsPaying] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   if (!isOpen) return null;
 
@@ -97,19 +101,72 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const gstAmount: number = Math.round(baseAmount * 0.18 * 100) / 100;
   const totalAmount: number = Math.round((baseAmount + gstAmount) * 100) / 100;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedPlan !== 'Trial') {
-      window.alert('Paid-plan checkout is not connected to a verified payment gateway yet. No payment has been taken. Please use the free trial for now.');
+    if (isPaying || !selectedStoreId) return;
+    if (selectedPlan === 'Trial') {
+      onSubmit({ storeId: selectedStoreId, plan: 'Trial', billingPeriod: 'Monthly', paymentMethod, transactionRef: 'TRIAL-ACTIVATION' });
       return;
     }
-    onSubmit({
-      storeId: selectedStoreId,
-      plan: 'Trial',
-      billingPeriod: 'Monthly',
-      paymentMethod,
-      transactionRef: 'TRIAL-ACTIVATION',
-    });
+    const selectedStore = stores.find(store => store.id === selectedStoreId);
+    if (!selectedStore) { setCheckoutError('Select a valid store before checkout.'); return; }
+    setIsPaying(true);
+    setCheckoutError('');
+    try {
+      const planKey = selectedPlan === 'Monthly' ? 'monthly' : selectedPlan === 'Annual VIP' ? 'annual_vip' : 'enterprise';
+      const orderResponse = await fetch('/api/billing/order', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeName: selectedStore.name, plan: planKey }),
+      });
+      const orderData = await orderResponse.json();
+      if (!orderResponse.ok) throw new Error(orderData.error || 'Could not start secure checkout.');
+      const RazorpayConstructor = (window as any).Razorpay;
+      if (!RazorpayConstructor) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('Razorpay Checkout could not load. Check your internet connection.'));
+          document.body.appendChild(script);
+        });
+      }
+      const Checkout = (window as any).Razorpay;
+      if (!Checkout) throw new Error('Secure payment checkout is unavailable.');
+      const result = await new Promise<any>((resolve, reject) => {
+        const checkout = new Checkout({
+          key: orderData.keyId,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: selectedStore.name,
+          description: currentPlanInfo.name,
+          order_id: orderData.orderId,
+          prefill: { name: selectedStore.ownerName || '', contact: selectedStore.phone || '' },
+          theme: { color: '#0f766e' },
+          handler: (response: any) => resolve(response),
+          modal: { ondismiss: () => reject(new Error('Payment window closed. No license was activated.')) },
+        });
+        checkout.on('payment.failed', (response: any) => reject(new Error(response?.error?.description || 'Payment failed. No license was activated.')));
+        checkout.open();
+      });
+      const verifyResponse = await fetch('/api/billing/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      });
+      const verified = await verifyResponse.json();
+      if (!verifyResponse.ok || !verified.ok || !verified.licenseToken || !verified.expiresAt) {
+        throw new Error(verified.error || 'Payment could not be verified. Do not pay again until the transaction is checked.');
+      }
+      onSubmit({
+        storeId: selectedStoreId, plan: selectedPlan,
+        billingPeriod: currentPlanInfo.billingPeriod, paymentMethod: 'UPI',
+        transactionRef: result.razorpay_payment_id,
+        licenseToken: verified.licenseToken, expiresAt: verified.expiresAt,
+      });
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : 'Checkout failed. No license was activated.');
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   return (
@@ -240,10 +297,12 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </div>
           </div>
 
+          {checkoutError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">{checkoutError}</p>}
+
           {totalAmount > 0 && (
             <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950">
-              <p className="font-bold">Paid checkout is not available yet</p>
-              <p className="mt-1">No verified payment gateway is connected. Do not transfer money using placeholder details. Paid plans cannot be activated from this screen; the free trial remains available.</p>
+              <p className="font-bold">Secure online checkout</p>
+              <p className="mt-1">Payment is processed by Razorpay. Your pharmacy records remain on this device; only store name, selected plan and payment identifiers are sent for subscription verification.</p>
             </div>
           )}
 
@@ -251,7 +310,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
               <ShieldCheck className="w-4 h-4 text-teal-700" />
-              <span>Free trial only until secure checkout is configured</span>
+              <span>Secure payment verification required for paid plans</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -263,10 +322,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={selectedPlan !== 'Trial'}
+                disabled={isPaying}
                 className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
-                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Paid checkout unavailable'}
+                {isPaying ? 'Processing securely…' : selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : `Pay ${formatCurrency(totalAmount)} securely`}
               </button>
             </div>
           </div>
