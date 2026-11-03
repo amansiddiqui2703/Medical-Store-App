@@ -556,6 +556,7 @@ export default function App() {
       returns,
       logs,
       invoices,
+      upiQr: localStorage.getItem('medical_store_upi_qr_v1') || '',
       madeBy: 'M.S. Medical Store',
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -613,6 +614,8 @@ export default function App() {
           StorageService.setActiveStoreId(data.activeStoreId);
         }
         setInvoices(Array.isArray(data.invoices) ? data.invoices as SubscriptionInvoice[] : []);
+        if (typeof data.upiQr === 'string' && data.upiQr.startsWith('data:image/')) localStorage.setItem('medical_store_upi_qr_v1', data.upiQr);
+        else localStorage.removeItem('medical_store_upi_qr_v1');
         showToast('Backup restored locally. Verify stock, balances and invoice totals before use.');
       } catch (err) {
         alert(err instanceof Error ? err.message : 'Invalid backup JSON file.');
@@ -630,6 +633,7 @@ export default function App() {
   const handleResetData = () => {
     if (window.confirm('Permanently clear all local store records on this device? Export a backup first. This cannot be undone.')) {
       StorageService.resetToDefaults();
+      localStorage.removeItem('medical_store_upi_qr_v1');
       setCustomers(StorageService.getCustomers());
       setStock(StorageService.getStock());
       setOrders(StorageService.getOrders());
