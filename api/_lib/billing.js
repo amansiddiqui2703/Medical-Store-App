@@ -39,15 +39,15 @@ export function verifyCheckoutSignature(orderId, paymentId, signature) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-export function issueLicense({ storeName, plan, paymentId, days }) {
-  const now = Math.floor(Date.now() / 1000);
+export function issueLicense({ storeName, plan, paymentId, days, paidAt }) {
+  const issuedAt = Number.isInteger(paidAt) && paidAt > 0 ? paidAt : Math.floor(Date.now() / 1000);
   const payload = {
     iss: 'ms-medical-store',
     store: storeName,
     plan,
     paymentId,
-    iat: now,
-    exp: now + days * 86400,
+    iat: issuedAt,
+    exp: issuedAt + days * 86400,
   };
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto.createHmac('sha256', process.env.LICENSE_SIGNING_SECRET).update(encoded).digest('base64url');
