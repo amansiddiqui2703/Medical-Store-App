@@ -113,7 +113,7 @@ export default function App() {
           const data = await response.json();
           if (response.status === 403 || (response.ok && data.valid === false)) return { id: store.id, invalid: true as const };
           if (!response.ok || !data.valid || !data.expiresAt) return { id: store.id, invalid: false as const };
-          const plan = data.plan === 'monthly' ? 'Monthly' : data.plan === 'annual_vip' ? 'Annual VIP' : data.plan === 'enterprise' ? 'Enterprise' : null;
+          const plan: SubscriptionPlanTier | null = data.plan === 'monthly' ? 'Monthly' : data.plan === 'annual_vip' ? 'Annual VIP' : data.plan === 'enterprise' ? 'Enterprise' : null;
           if (!plan) return { id: store.id, invalid: true as const };
           return { id: store.id, invalid: false as const, plan, expiresAt: String(data.expiresAt).slice(0, 10) };
         } catch {
