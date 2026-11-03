@@ -122,7 +122,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       const planKey = selectedPlan === 'Monthly' ? 'monthly' : selectedPlan === 'Annual VIP' ? 'annual_vip' : 'enterprise';
       const orderResponse = await fetch('/api/billing/order', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeName: selectedStore.name, plan: planKey }),
+        body: JSON.stringify({ storeName: selectedStore.name, storeId: selectedStore.id, plan: planKey }),
       });
       const orderData = await orderResponse.json();
       if (!orderResponse.ok) throw new Error(orderData.error || 'Could not start secure checkout.');
@@ -159,7 +159,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
         body: JSON.stringify(result),
       });
       const verified = await verifyResponse.json();
-      if (!verifyResponse.ok || !verified.ok || !verified.licenseToken || !verified.expiresAt) {
+      if (!verifyResponse.ok || !verified.ok || !verified.licenseToken || !verified.expiresAt || verified.storeId !== selectedStore.id) {
         throw new Error(verified.error || 'Payment could not be verified. Do not pay again until the transaction is checked.');
       }
       onSubmit({
