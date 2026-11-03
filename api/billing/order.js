@@ -5,9 +5,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   try {
     requiredEnv();
-    const { storeName, plan } = req.body || {};
+    const { storeName, storeId, plan } = req.body || {};
     const selected = PLANS[plan];
-    if (typeof storeName !== 'string' || storeName.trim().length < 2 || storeName.trim().length > 100 || !selected) {
+    if (typeof storeName !== 'string' || storeName.trim().length < 2 || storeName.trim().length > 100 || typeof storeId !== 'string' || storeId.trim().length < 1 || storeId.length > 128 || !selected) {
       return json(res, 400, { error: 'Enter a valid store name and subscription plan.' });
     }
     const basePaise = selected.baseRupees * 100;
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
         amount: basePaise + gstPaise,
         currency: 'INR',
         receipt: `ms-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
-        notes: { store_name: storeName.trim(), plan, product: 'ms-medical-store' },
+        notes: { store_name: storeName.trim(), store_id: storeId.trim(), plan, product: 'ms-medical-store' },
       },
     });
     return json(res, 200, {
