@@ -271,19 +271,19 @@ export class StorageService {
       totalAmount = 0;
       daysToAdd = 14;
     } else if (params.plan === 'Monthly') {
-      totalAmount = 999;
-      baseAmount = Math.round(totalAmount / 1.18);
-      gstAmount = totalAmount - baseAmount;
+      baseAmount = 999;
+      gstAmount = Math.round(baseAmount * 0.18);
+      totalAmount = baseAmount + gstAmount;
       daysToAdd = 30;
     } else if (params.plan === 'Annual VIP') {
-      totalAmount = 9999;
-      baseAmount = Math.round(totalAmount / 1.18);
-      gstAmount = totalAmount - baseAmount;
+      baseAmount = 9999;
+      gstAmount = Math.round(baseAmount * 0.18);
+      totalAmount = baseAmount + gstAmount;
       daysToAdd = 365;
     } else if (params.plan === 'Enterprise') {
-      totalAmount = 24999;
-      baseAmount = Math.round(totalAmount / 1.18);
-      gstAmount = totalAmount - baseAmount;
+      baseAmount = 24999;
+      gstAmount = Math.round(baseAmount * 0.18);
+      totalAmount = baseAmount + gstAmount;
       daysToAdd = 365;
     }
 
