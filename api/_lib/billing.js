@@ -7,39 +7,16 @@ export const PLANS = {
 };
 
 export function json(res, status, body) {
-  res.status(status).setHeader('Cache-Control', 'no-store').json(body);
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Type', 'application/json');
+  return res.status(status).json(body);
 }
 
 export function requiredEnv() {
-  const names = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'];
-  const missing = names.filter((name) => !process.env[name]);
-  if (missing.length) throw new Error(`Server configuration missing: ${missing.join(', ')}`);
-}
-
-export async function authenticatedUser(req) {
-  const authorization = req.headers.authorization || '';
-  if (!authorization.startsWith('Bearer ')) return null;
-  const response = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
-    headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: authorization },
-  });
-  if (!response.ok) return null;
-  return response.json();
-}
-
-export async function supabase(path, { method = 'GET', body, prefer } = {}) {
-  const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/${path}`, {
-    method,
-    headers: {
-      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      ...(prefer ? { Prefer: prefer } : {}),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`Database request failed (${response.status}): ${text.slice(0, 300)}`);
-  return text ? JSON.parse(text) : null;
+  const missing = ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'LICENSE_SIGNING_SECRET']
+    .filter((name) => !process.env[name]);
+  if (missing.length) throw new Error(`Missing server environment: ${missing.join(', ')}`);
+  if (process.env.LICENSE_SIGNING_SECRET.length < 32) throw new Error('LICENSE_SIGNING_SECRET must be at least 32 characters.');
 }
 
 export async function razorpay(path, { method = 'GET', body } = {}) {
@@ -60,4 +37,34 @@ export function verifyCheckoutSignature(orderId, paymentId, signature) {
   const a = Buffer.from(expected);
   const b = Buffer.from(String(signature || ''));
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+export function issueLicense({ storeName, plan, paymentId, days }) {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: 'ms-medical-store',
+    store: storeName,
+    plan,
+    paymentId,
+    iat: now,
+    exp: now + days * 86400,
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', process.env.LICENSE_SIGNING_SECRET).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+export function verifyLicense(token) {
+  if (typeof token !== 'string' || token.length > 4096) return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const expected = crypto.createHmac('sha256', process.env.LICENSE_SIGNING_SECRET).update(parts[0]).digest();
+  let actual;
+  try { actual = Buffer.from(parts[1], 'base64url'); } catch { return null; }
+  if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    if (payload.iss !== 'ms-medical-store' || !payload.store || !PLANS[payload.plan] || !Number.isInteger(payload.exp) || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch { return null; }
 }
