@@ -67,6 +67,8 @@ export interface Order {
   notes?: string;
   saleItems?: SaleLineItem[];
   completedAt?: string;
+  paymentMethod?: 'Cash' | 'UPI';
+  paymentStatus?: 'Paid' | 'Pending';
 }
 
 export interface CreditTransaction {
