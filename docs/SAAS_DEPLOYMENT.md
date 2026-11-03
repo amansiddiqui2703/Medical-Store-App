@@ -1,50 +1,33 @@
-# M.S. Medical Store — Mobile app and subscription deployment
+# M.S. Medical Store — mobile app and manual subscription deployment
 
-## Data storage decision: local only
+## Pharmacy data
+- Pharmacy operational data stays in browser storage on the phone. No hosted pharmacy database or cloud sync is used.
+- Current storage is localStorage. Export backups regularly; clearing browser data or losing the phone can erase records.
+- IndexedDB migration and Android recovery testing remain release work.
 
-- Pharmacy operational data (medicine inventory, batches, customers, sales, invoices, Udhaar, settings and reports) stays in the browser on the phone.
-- The existing app currently uses browser localStorage. A future IndexedDB migration is recommended for larger datasets, but do it with a tested migration and backup path.
-- No Supabase, Firebase, hosted pharmacy database, or cloud sync is used by this design.
-- Clearing browser/site data, losing the phone, or uninstalling a browser can erase local records. Export backups regularly and store a copy somewhere safe.
+## Subscription payments: manual UPI only
+No Razorpay or other payment gateway is used. The customer pays Automindz using its configured UPI ID. Staff/admin independently checks the transaction in the receiving bank/UPI app. A screenshot is not proof. After confirming the UTR and amount, an authorized admin issues a signed license. The store enters its UTR and activation code in the subscription screen.
 
-## Why a tiny server is still used for paid subscriptions
+### Vercel environment variables
+- `LICENSE_SIGNING_SECRET`: random server-only secret, at least 32 characters.
+- `SUBSCRIPTION_ADMIN_SECRET`: separate random server-only admin secret, at least 32 characters.
+- `VITE_SUBSCRIPTION_UPI_ID`: public business UPI ID used to open the payment app. Configure this before accepting subscription payments.
 
-Razorpay's secret key must never be placed in a mobile/browser app. The three small Vercel API routes below only create payment orders, verify captured payments directly with Razorpay, issue a signed license token, and check that token. They do not store or receive customer, medicine, invoice, prescription, inventory or Udhaar records.
+Never expose either server secret in a `VITE_*` variable or frontend source.
 
-### Environment variables (Vercel server-side only)
+## Admin approval endpoint
+After manually confirming the payment in the bank/UPI app, call `POST /api/billing/manual-approve` with header `x-admin-secret: YOUR_SUBSCRIPTION_ADMIN_SECRET` and JSON body:
+`{ "storeName": "M.S. Medical Store", "storeId": "exact-local-store-id", "plan": "monthly", "utr": "verified-bank-UTR" }`
+Allowed plans: `monthly`, `annual_vip`, `enterprise`. The response contains a signed `licenseToken`; send it privately to the store owner. Do not share the admin secret. The endpoint does not store payment records, so keep your own accounting/UTR register and never approve the same payment twice.
 
-- `RAZORPAY_KEY_ID`
-- `RAZORPAY_KEY_SECRET`
-- `LICENSE_SIGNING_SECRET` — random secret of at least 32 characters
+`POST /api/license/verify` verifies a signed token. Only the token, store ID and plan are used for license validation; pharmacy customer, medicine, invoice, prescription and inventory data are not sent.
 
-Never put either secret in a `VITE_*` variable or frontend source code.
+## Prices shown in the app
+- Pro Monthly: ₹999 + estimated 18% GST
+- Annual VIP: ₹9,999 + estimated 18% GST
+- Enterprise: ₹24,999 + estimated 18% GST
 
-## API routes
+Confirm applicable GST treatment and invoice requirements with a qualified accountant. The displayed 18% is an estimate, not tax advice.
 
-- `POST /api/billing/order`: body `{ "storeName": "M.S. Medical Store", "storeId": "local-store-id", "plan": "monthly|annual_vip|enterprise" }`. Returns Razorpay Checkout order details.
-- `POST /api/billing/verify`: body with Razorpay Checkout's `razorpay_order_id`, `razorpay_payment_id`, and `razorpay_signature`. Server checks signature, fetches the order and payment from Razorpay, checks captured status, exact amount, currency, product and store/plan notes, then issues a signed license token.
-- `POST /api/license/verify`: body `{ "licenseToken": "..." }`. Checks signature and expiry.
-
-The subscription modal now calls the order endpoint, opens Razorpay Checkout, verifies the returned payment server-side, and stores the signed license token locally. The app revalidates saved tokens at startup when online; an invalid token marks the store license expired. Temporary network failures preserve the last locally stored state. A token saved in local storage is not itself proof of payment.
-
-## Plans
-
-- Pro Monthly: ₹999 + 18% GST (if applicable; confirm with accountant)
-- Annual VIP: ₹9,999 + 18% GST (if applicable; confirm with accountant)
-- Enterprise: ₹24,999 + 18% GST (if applicable; confirm with accountant)
-
-Confirm applicable GST treatment and invoice requirements with a qualified accountant before live billing.
-
-## Remaining release work
-
-This branch includes the subscription checkout integration but is not a finished production release. Before launch:
-- Add server-side entitlement enforcement for paid-only features and define a documented offline grace-period policy.
-- Add subscription status/expiry UI and a tested renewal/refund/support workflow.
-- Test checkout in Razorpay test mode, including payment failure, cancellation, duplicate callbacks, renewal and expired-license scenarios.
-- Add IndexedDB migration from existing localStorage without losing current store records.
-- Harden app lock, backup/restore, data validation, and audit history for local operations.
-- Test Android Chrome installation, small screens, print/share receipt, payment failures, double-submit, renewals, expired licenses, browser storage clearing and phone-loss restore.
-- Configure Razorpay KYC, settlement bank account, live credentials and webhook reconciliation before live sales.
-- Verify pharmacy, prescription, invoice, GST, privacy and record-retention requirements with qualified professionals.
-
-Do not use the app as the only record for live medicine sales until operational workflows and recovery have been validated with the pharmacy owner.
+## Not yet production-certified
+This change removes Razorpay checkout and implements manual UPI plus signed admin-issued licenses. It does not by itself make the app production-certified. Still required: configure the three environment variables, test payment and license issuance end-to-end, migrate localStorage safely to IndexedDB, test Android Chrome and backup/restore on the actual phone, enforce paid feature entitlements, and review pharmacy/prescription/privacy/GST obligations. Do not use this app as the sole statutory pharmacy record until those checks are complete.
