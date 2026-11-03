@@ -21,7 +21,7 @@ Never put either secret in a `VITE_*` variable or frontend source code.
 
 ## API routes
 
-- `POST /api/billing/order`: body `{ "storeName": "M.S. Medical Store", "plan": "monthly|annual_vip|enterprise" }`. Returns Razorpay Checkout order details.
+- `POST /api/billing/order`: body `{ "storeName": "M.S. Medical Store", "storeId": "local-store-id", "plan": "monthly|annual_vip|enterprise" }`. Returns Razorpay Checkout order details.
 - `POST /api/billing/verify`: body with Razorpay Checkout's `razorpay_order_id`, `razorpay_payment_id`, and `razorpay_signature`. Server checks signature, fetches the order and payment from Razorpay, checks captured status, exact amount, currency, product and store/plan notes, then issues a signed license token.
 - `POST /api/license/verify`: body `{ "licenseToken": "..." }`. Checks signature and expiry.
 
