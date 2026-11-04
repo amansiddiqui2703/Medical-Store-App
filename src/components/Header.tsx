@@ -70,44 +70,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-1 mt-0.5">
-            {stores.length > 0 && onSelectStore ? (
-              <select
-                value={activeStoreId}
-                onChange={e => {
-                  if (e.target.value === '__add_new__' && onOpenAddStore) {
-                    onOpenAddStore();
-                  } else {
-                    onSelectStore(e.target.value);
-                  }
-                }}
-                className="text-[11px] sm:text-xs font-semibold text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded px-1.5 py-0.5 cursor-pointer max-w-[125px] sm:max-w-[210px] truncate focus:outline-none"
-                title="Switch active medical store"
-              >
-                {stores.map(st => (
-                  <option key={st.id} value={st.id}>
-                    {st.name} ({st.city})
-                  </option>
-                ))}
-                {onOpenAddStore && (
-                  <option value="__add_new__">＋ Onboard New Medical Store...</option>
-                )}
-              </select>
-            ) : (
-              <div className="text-[11px] sm:text-xs text-slate-500 whitespace-nowrap truncate max-w-[140px] sm:max-w-[240px]">
-                {settings.storeName}
-              </div>
-            )}
-
-            {activeStore && onNavigate && (
-              <button
-                type="button"
-                onClick={() => onNavigate('subscription')}
-                className="hidden xs:inline-block text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer shrink-0 truncate max-w-[80px]"
-                title="View Subscription & SaaS Licensing"
-              >
-                {activeStore.plan}
-              </button>
-            )}
+            <div className="text-[11px] sm:text-xs text-slate-500 whitespace-nowrap truncate max-w-[140px] sm:max-w-[240px]">
+              {activeStore?.name || settings.storeName}
+            </div>
           </div>
         </div>
       </div>
@@ -116,16 +81,16 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="hidden lg:flex items-center gap-4 text-xs text-slate-600">
         <span className="tabular-nums font-medium text-slate-700">{currentDate}</span>
         <span aria-hidden="true" className="text-slate-300">·</span>
-        <span className="text-slate-500">Auto Reminders: 9:00 AM IST</span>
+        <span className="text-slate-500">Manual reminder scan</span>
         <span aria-hidden="true" className="text-slate-300">·</span>
         <button
           onClick={onTriggerCron}
           disabled={isCronRunning}
           className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-md transition-colors cursor-pointer"
-          title="Simulate daily 9 AM automatic scan now"
+          title="Prepare a local reminder scan; no messages are sent automatically"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isCronRunning ? 'animate-spin' : ''}`} />
-          <span>{isCronRunning ? 'Running 9 AM Scan...' : 'Run 9 AM Scan'}</span>
+          <span>{isCronRunning ? 'Scanning...' : 'Run Reminder Scan'}</span>
         </button>
       </div>
 
