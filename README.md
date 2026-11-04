@@ -1,73 +1,51 @@
-# M.S. Medical Store App
+# Refill Desk
 
-A responsive medical-store management app being prepared for **M.S. Medical Store, Una, Gujarat**.
+Refill Desk is a single-device, local-first pharmacy workflow pilot from Automindz Digital Labs. It is currently being trialled with M.S. Medical Store, Una, Gujarat.
 
-## Current status
+## What is included in this pilot
 
-This repository is a **development prototype, not production-ready for live pharmacy records**. The latest development branch includes structured batch billing, local backups, an optional private sync prototype, and automated type-check/server tests/frontend build. A passing CI run is useful evidence, but it does not replace real device, security, privacy, accounting, or pharmacy workflow testing.
+- Responsive web app and installable PWA shell.
+- Customer and refill records.
+- Medicine stock and batch tracking, including expiry visibility.
+- Order workflow and batch-aware completed-sale flow.
+- Udhaar balance and transaction history.
+- Refill reminder drafts/logs (the app does **not** automatically send WhatsApp messages).
+- JSON backup export and restore. Before restoring, the app downloads a safety backup of current records.
+- Data is stored in the browser's local storage on one device/browser profile. There is no cloud database, multi-user login, or cross-device sync.
 
-## Features in the prototype
+## Pilot price
 
-- Responsive React + Vite dashboard and installable PWA shell.
-- Customer records, medicine batches, orders, expiry tracking, credit/udhaar, reminder logs and backup/restore UI.
-- Fresh customer, stock, order and payment lists start empty; the app must not seed fake patient, medicine, sale or payment records.
-- The Create Bill flow requires actual in-stock, unexpired batches, validates quantities/prices, and deducts the selected batches when a sale is completed.
-- Receipts show saved batch-wise sale lines and offer browser print/save-PDF.
-- Reminder actions currently prepare/log drafts only; they do not send WhatsApp messages automatically.
-- Paid subscription checkout is disabled until a real payment provider, server-side verification, webhook signature validation, refunds, and tax/accounting workflow are implemented.
+The intended pilot price is **₹999 per month**. This is a proposed commercial price, not an active in-app checkout. Paid activation is disabled until a payment provider and server-side verification are implemented. Do not collect a payment by asking a customer to enter a transaction reference into the app.
 
-## Local development
+## Important limitations
+
+This is a pilot/prototype, not a certified pharmacy billing, accounting, or clinical system.
+
+- Local browser data may be lost if site data is cleared, the browser profile is reset, or the device is lost/damaged. Export JSON backups frequently and keep copies separately.
+- A JSON export is not automatically encrypted. Store backup files securely; they may contain sensitive customer information.
+- The reminder workflow prepares drafts/logs only. No WhatsApp API connection or automatic message delivery is included.
+- Receipts are operational receipts, not GST/tax invoices.
+- The app does not provide pharmacist identity verification, user roles, audit-grade records, or regulatory compliance certification.
+- Validate medicine stock, batch, expiry, customer balances, and totals before relying on any record.
+- Do not store real prescription or sensitive patient data until a qualified privacy/security review and appropriate safeguards are completed.
+- The current paid checkout is disabled. ₹999/month is not yet purchasable inside the app.
+
+## Local development and checks
 
 1. Install Node.js LTS.
 2. Run `npm install`.
-3. Run `npm run dev` for development.
-4. Run `npm run check` to type-check, test the sync server, and build the frontend.
+3. Run `npm run dev`.
+4. Run `npm run check` for type-checking, server tests and production build.
 
-## Optional private sync server (prototype only)
+## Release checklist before taking live pharmacy data or subscription payments
 
-The sync service stores a JSON snapshot on the Windows PC. It is **not** a durable multi-user database and does not provide user accounts, role permissions, full conflict merging, or a tested recovery guarantee.
+- Test Android Chrome and desktop Chrome, install/update PWA, printing, refresh, offline and reconnect behavior.
+- Test stock deduction, expired batches, insufficient stock, duplicate line items, repeat submission, cancellations and backup restore using disposable test data.
+- Confirm data retention, deletion, backup protection and customer privacy notices.
+- Have the pharmacy owner/accountant review applicable drug-sale, prescription, record-keeping, GST and invoice requirements.
+- Add a payment provider with server-side payment verification, webhook signature checks, idempotency, refund handling and proper tax/accounting review before enabling paid activation.
+- Add authentication, access controls, audit logs and a durable database before offering multi-user or multi-device operation.
 
-1. Install Node.js LTS and run `npm install` in this repository.
-2. Create a long random secret of at least 24 characters. Keep it private.
-3. In PowerShell, from the project folder:
+## Suggested safe pilot
 
-   ```powershell
-   $env:SYNC_TOKEN = "replace-this-with-a-long-random-secret"
-   npm run sync-server
-   ```
-
-4. By default, the server binds to `127.0.0.1` only. This secure default means only the Windows PC itself can connect.
-5. For another device, do **not** expose port 8787 to the public internet. Configure a specific trusted private-interface address using `SYNC_HOST`, restrict it with the Windows firewall, and use a private network plus HTTPS for remote access. Configure `SYNC_ALLOWED_ORIGINS` to the exact app origin(s). A private network or token alone is not a substitute for a complete security review.
-6. In the app, tap **Private Sync**, enter the private server URL and the same sync token. Keep the token private.
-
-### Pairing and backups
-
-- If the server is empty, the first configured device can initialize it with its local snapshot.
-- If both the server and device contain data, the app stops and asks for a backup/primary-device decision. It does not silently merge or overwrite records.
-- A sync conflict means no data was overwritten. Export a backup from each device before resolving it.
-- Browser local storage can be lost if browser data is cleared, the browser profile is removed, or the device fails.
-- Verify backup restoration on a separate device and keep a second encrypted copy somewhere separate from the PC.
-
-## Production release gate — required before live use
-
-Do **not** use this prototype as the sole record for real medicine sales, inventory, accounting, or customer/patient information until all relevant items below are completed and verified:
-
-- Replace browser localStorage and JSON snapshot sync with a durable, access-controlled database and tested migration/recovery plan for any multi-user or multi-device production deployment.
-- Implement strong authentication, least-privilege roles, audit trails, session/token rotation, and secure secret handling.
-- Test the full sale workflow with disposable test data: expired batches, insufficient stock, duplicate lines, repeated submit/double-click, cancelled orders, refresh, and backup restore.
-- Test Windows and Android browsers, PWA installation, printing, offline/reconnect behavior, and device-loss recovery hands-on.
-- Review privacy notice, data minimization, prescription-file handling, retention/deletion, backup encryption, and incident response before storing real patient data.
-- Have the pharmacy owner/accountant verify applicable drug-sale, prescription, record-keeping, GST and invoice requirements. This app does not certify legal compliance.
-- Add dependency lockfile and run dependency/security scans; review and fix findings.
-- If offering subscriptions, implement a real payment provider with server-side payment verification, webhook signature validation, idempotency, refunds, and appropriate accounting/tax processes. Never mark a plan paid based on a user-entered transaction reference.
-
-## Known limitations
-
-- Browser storage is not a secure multi-user database. Data can be lost when browser data is cleared or the device fails.
-- Private sync is a prototype transport; it has no user roles, robust conflict merge, or proven disaster recovery.
-- The receipt is not a GST/tax invoice. The subscription invoice screen is only a draft preview and does not establish payment or tax compliance.
-- No real payment gateway is connected. Paid subscription plans cannot be activated from the checkout screen.
-- No WhatsApp messages are sent by the reminder simulator.
-- Prescription and customer data require privacy, security, retention, and backup review before real use.
-
-**Recommended first use:** test with disposable data on one device, export backups frequently, and have the pharmacy owner validate every operational and legal requirement before relying on it for live sales.
+Demonstrate with demo data first. If a store wants to trial it, onboard one device, make a JSON backup before entering any data, and test the full workflow with non-sensitive test records. Do not represent unavailable features as included.
