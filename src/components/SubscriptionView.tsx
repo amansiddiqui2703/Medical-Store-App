@@ -76,14 +76,14 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       tier: 'Monthly',
       name: 'Pro Monthly',
       price: 999,
-      period: 'Proposed price · paid plan unavailable',
-      description: 'Proposed paid tier. Not available until secure licensing and payment verification are implemented.',
+      period: '₹999 / 30 days · signed offline license',
+      description: '30-day Pro plan activated with a signed offline license after manual UTR verification.',
       patientLimit: 'Not confirmed',
       features: [
         'Paid features are not enabled in this pilot',
         'No automatic WhatsApp sending',
         'No cloud database or cross-device sync',
-        'No secure paid license activation yet',
+        'Signed offline license activation; no cross-device data sync',
       ],
     },
     {
@@ -169,7 +169,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            View the local pilot status. Paid checkout, secure license activation and tax invoices are not available.
+            View your local workspace plan. Pro Monthly requires a manually verified signed license key; this is not a GST invoice.
           </p>
         </div>
 
