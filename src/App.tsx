@@ -79,7 +79,7 @@ export default function App() {
   // Subscription and Invoices state
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>(() => StorageService.getInvoices());
   const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
-  const [subscribeModalPlan, setSubscribeModalPlan] = useState<SubscriptionPlanTier>('Annual VIP');
+  const [subscribeModalPlan, setSubscribeModalPlan] = useState<SubscriptionPlanTier>('Trial');
   const [subscribeModalStoreId, setSubscribeModalStoreId] = useState<string>('');
   const [selectedTaxInvoice, setSelectedTaxInvoice] = useState<SubscriptionInvoice | null>(null);
 
