@@ -25,7 +25,6 @@ import { CustomersView } from './components/CustomersView';
 import { ExpiryView } from './components/ExpiryView';
 import { UdhaarView } from './components/UdhaarView';
 import { MessageLogsView } from './components/MessageLogsView';
-import { StoreNetworkView } from './components/StoreNetworkView';
 import { SubscriptionView } from './components/SubscriptionView';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { NewOrderModal } from './components/NewOrderModal';
@@ -35,7 +34,6 @@ import { SettleUdhaarModal } from './components/SettleUdhaarModal';
 import { BulkReminderModal } from './components/BulkReminderModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AutomindzBrandingModal } from './components/AutomindzBrandingModal';
-import { AddStoreModal } from './components/AddStoreModal';
 import { SubscribeModal } from './components/SubscribeModal';
 import { TaxInvoiceModal } from './components/TaxInvoiceModal';
 import { BottomNav } from './components/BottomNav';
@@ -150,6 +148,10 @@ export default function App() {
     newStoreData: Omit<MedicalStore, 'id' | 'createdAt'>,
     switchToNew: boolean
   ) => {
+    if (stores.length >= 1) {
+      showToast('Multi-store mode is disabled in this single-device pilot.');
+      return;
+    }
     const newStore: MedicalStore = {
       ...newStoreData,
       id: `store_${Date.now()}`,
@@ -623,6 +625,9 @@ export default function App() {
         setReturns(Array.isArray(data.returns) ? data.returns as DistributorReturn[] : []);
         setLogs(Array.isArray(data.logs) ? data.logs as MessageLog[] : []);
         if (data.store && typeof data.store === 'object' && !Array.isArray(data.store)) setSettings({ ...StorageService.getSettings(), ...(data.store as Partial<StoreSettings>) });
+        if (Array.isArray(data.stores) && data.stores.length > 1) {
+          throw new Error('This backup contains multiple stores. Multi-store restore is disabled because records are not isolated by store. Use a single-store backup to avoid mixing pharmacy data.');
+        }
         if (Array.isArray(data.stores) && data.stores.length) {
           setStores(data.stores as MedicalStore[]);
           StorageService.saveStores(data.stores as MedicalStore[]);
@@ -695,14 +700,11 @@ export default function App() {
         {/* Main Content Area */}
         <main className="flex-1 p-3.5 sm:p-6 md:p-8 pb-24 md:pb-8 overflow-x-hidden min-w-0">
           {activeTab === 'network' && (
-            <StoreNetworkView
-              stores={stores}
-              activeStoreId={activeStoreId}
-              onSelectStore={handleSelectStore}
-              onOpenAddStore={() => setIsAddStoreOpen(true)}
-              onDeleteStore={handleDeleteStore}
-              onManageSubscription={storeId => handleOpenSubscribeModal('Annual VIP', storeId)}
-            />
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+              <h2 className="font-bold">Multi-store mode is disabled</h2>
+              <p className="mt-1">This version stores pharmacy records locally on this device and supports one store workspace only. Separate stores need isolated data storage and secure accounts before they can be enabled.</p>
+              <button type="button" onClick={() => setActiveTab('dashboard')} className="mt-3 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">Return to store overview</button>
+            </div>
           )}
           {activeTab === 'dashboard' && (
             <DashboardView
@@ -893,11 +895,6 @@ export default function App() {
         onClose={() => setIsBrandingOpen(false)}
       />
 
-      <AddStoreModal
-        isOpen={isAddStoreOpen}
-        onClose={() => setIsAddStoreOpen(false)}
-        onSubmit={handleAddStore}
-      />
 
       <SubscribeModal
         isOpen={isSubscribeModalOpen}
