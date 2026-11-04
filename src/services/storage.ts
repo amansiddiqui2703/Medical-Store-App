@@ -286,7 +286,8 @@ export class StorageService {
 
     // Compute new expiry date
     const currentExpiry = new Date(store.subscriptionExpiresAt || Date.now());
-    const baseDate = currentExpiry.getTime() > Date.now() ? currentExpiry : new Date();
+    const hasActivePaidTerm = store.plan === 'Monthly' && store.status === 'Active' && currentExpiry.getTime() > Date.now();
+    const baseDate = hasActivePaidTerm ? currentExpiry : new Date();
     baseDate.setDate(baseDate.getDate() + daysToAdd);
     const newExpiresAt = baseDate.toISOString().slice(0, 10);
 
