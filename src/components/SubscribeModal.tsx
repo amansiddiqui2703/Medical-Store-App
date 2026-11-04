@@ -45,8 +45,8 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       name: 'Free Trial',
       price: 0,
       billingPeriod: 'Monthly',
-      cadenceText: '14 Days Free Demo',
-      features: ['25 chronic patient profiles', 'Manual click-to-chat links', 'Standard expiry tracker'],
+      cadenceText: '14-day trial period shown in the app',
+      features: ['Customer and refill records stored on this device', 'Manual click-to-chat links', 'Standard expiry tracker'],
     },
     'Monthly': {
       name: 'Pro Monthly',
