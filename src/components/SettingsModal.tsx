@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Save, RotateCcw, Download, Upload, Shield } from 'lucide-react';
 import { StoreSettings } from '../types';
 
@@ -22,6 +22,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onImportData,
 }) => {
   const [formData, setFormData] = useState<StoreSettings>(settings);
+
+  useEffect(() => {
+    if (isOpen) setFormData(settings);
+  }, [isOpen, settings]);
 
   if (!isOpen) return null;
 
