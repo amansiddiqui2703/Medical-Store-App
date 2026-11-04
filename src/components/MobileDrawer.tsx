@@ -69,12 +69,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
       icon: <LayoutDashboard className="w-4 h-4" />,
     },
     {
-      id: 'network',
-      label: 'Stores Network (Multi-Store)',
-      icon: <Building2 className="w-4 h-4" />,
-      badgeCount: storesCount,
-    },
-    {
       id: 'refill',
       label: 'Refill Due Reminders',
       icon: <Clock className="w-4 h-4" />,
@@ -157,30 +151,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
             </button>
           </div>
 
-          {/* Active Store Switcher inside Drawer */}
           <div className="p-3 bg-teal-50/60 border-b border-teal-100">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 block mb-1">
-              Active Medical Store
-            </span>
-            <select
-              value={activeStoreId}
-              onChange={e => {
-                if (e.target.value === '__add_new__') {
-                  onClose();
-                  onOpenAddStore();
-                } else {
-                  onSelectStore(e.target.value);
-                }
-              }}
-              className="w-full text-xs font-semibold text-teal-950 bg-white border border-teal-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
-            >
-              {stores.map(st => (
-                <option key={st.id} value={st.id}>
-                  {st.name} ({st.city})
-                </option>
-              ))}
-              <option value="__add_new__">＋ Onboard New Medical Store...</option>
-            </select>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 block mb-1">This device's pharmacy</span>
+            <p className="text-xs font-semibold text-teal-950">{stores.find(store => store.id === activeStoreId)?.name || 'Medical Store'}</p>
+            <p className="text-[10px] text-teal-800 mt-1">Single-store workspace · records stay on this device</p>
           </div>
 
           {/* Nav Links */}
@@ -232,7 +206,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
             className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-teal-900 bg-teal-100/70 hover:bg-teal-100 rounded-lg transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isCronRunning ? 'animate-spin' : ''}`} />
-            <span>{isCronRunning ? 'Running 9 AM Scan...' : 'Trigger 9 AM Auto Scan'}</span>
+            <span>{isCronRunning ? 'Running 9 AM Scan...' : 'Run Reminder Scan'}</span>
           </button>
 
           <div className="grid grid-cols-2 gap-2">
