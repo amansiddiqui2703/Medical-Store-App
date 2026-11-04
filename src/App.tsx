@@ -15,7 +15,6 @@ import {
   SubscriptionPlanTier,
 } from './types';
 import { StorageService } from './services/storage';
-import { verifyOfflineLicense } from './utils/offlineLicense';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -110,14 +109,10 @@ export default function App() {
     licenseToken?: string;
   }) => {
     try {
-      let activationParams = params;
-      if (params.plan === 'Monthly') {
-        const targetStore = stores.find(store => store.id === params.storeId);
-        if (!targetStore || !params.licenseToken) throw new Error('A valid pharmacy and signed license key are required.');
-        const verified = await verifyOfflineLicense(params.licenseToken, { name: settings.storeName, phone: settings.phone, licenseNumber: settings.licenseNumber });
-        activationParams = { ...params, transactionRef: verified.utr };
+      if (params.plan !== 'Trial') {
+        throw new Error('Paid activation is temporarily disabled while secure server-side payment approval is being built. Do not send payment yet.');
       }
-      const { updatedStore, newInvoice } = StorageService.activateSubscription(activationParams);
+      const { updatedStore, newInvoice } = StorageService.activateSubscription(params);
       const updatedStores = stores.map(s => (s.id === updatedStore.id ? updatedStore : s));
       setStores(updatedStores);
       setInvoices([newInvoice, ...invoices]);
