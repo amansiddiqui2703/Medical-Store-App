@@ -101,7 +101,7 @@ export default function App() {
     setIsSubscribeModalOpen(true);
   };
 
-  const handleActivateSubscription = (params: {
+  const handleActivateSubscription = async (params: {
     storeId: string;
     plan: SubscriptionPlanTier;
     billingPeriod: 'Monthly' | 'Annual';
