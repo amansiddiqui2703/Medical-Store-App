@@ -606,33 +606,43 @@ export default function App() {
     showToast(`Message draft logged for ${name}. No message was sent automatically.`);
   };
 
-  // Data Export / Import / Reset. Backups include every locally stored business record.
-  const handleExportAllJSON = () => {
-    const backup = {
-      schemaVersion: 2,
-      exportedAt: new Date().toISOString(),
-      store: settings,
-      stores,
-      activeStoreId,
-      customers,
-      stock,
-      orders,
-      transactions,
-      returns,
-      logs,
-      invoices,
-      madeBy: 'M.S. Medical Store',
-    };
+  // Local-only backup: export every business record to a portable JSON file.
+  const buildLocalBackup = () => ({
+    app: 'Refill Desk',
+    schemaVersion: 3,
+    exportedAt: new Date().toISOString(),
+    store: settings,
+    stores,
+    activeStoreId,
+    customers,
+    stock,
+    orders,
+    transactions,
+    returns,
+    logs,
+    invoices,
+    madeBy: 'M.S. Medical Store',
+  });
+
+  const downloadBackup = (backup: ReturnType<typeof buildLocalBackup>, label = 'manual') => {
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ms-medical-store-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `refill-desk-${label}-backup-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showToast('Backup downloaded. Keep a second copy outside this device.');
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  };
+
+  const handleExportAllJSON = () => {
+    try {
+      downloadBackup(buildLocalBackup());
+      showToast('Refill Desk backup downloaded. Save a copy in another safe location.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Backup could not be created. Check available device storage.');
+    }
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -660,8 +670,19 @@ export default function App() {
         if (!Array.isArray(data.customers) || !Array.isArray(data.stock) || !Array.isArray(data.orders)) {
           throw new Error('This backup is missing required customers, stock or orders lists.');
         }
-        if (!window.confirm('Restore this backup? Current local records will be replaced. Export a backup of current data first.')) return;
+        if (data.schemaVersion !== undefined && (typeof data.schemaVersion !== 'number' || data.schemaVersion < 1 || data.schemaVersion > 3)) {
+          throw new Error('This backup version is not supported by this Refill Desk build.');
+        }
+        if (data.store !== undefined && (!data.store || typeof data.store !== 'object' || Array.isArray(data.store))) {
+          throw new Error('Invalid store settings in backup.');
+        }
+        if (data.stores !== undefined && Array.isArray(data.stores) && data.stores.some(store => !store || typeof store !== 'object' || typeof (store as Record<string, unknown>).id !== 'string')) {
+          throw new Error('Backup contains an invalid store entry.');
+        }
+        if (!window.confirm('Restore this backup to this device? Current local records will be replaced. A safety backup of current records will download first.')) return;
 
+        // Download current data before replacing anything, so a mistaken restore is reversible.
+        downloadBackup(buildLocalBackup(), 'before-restore');
         setCustomers(data.customers as Customer[]);
         setStock(data.stock as StockItem[]);
         setOrders(data.orders as Order[]);
