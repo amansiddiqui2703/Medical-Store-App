@@ -15,7 +15,7 @@ Refill Desk is a single-device, local-first pharmacy workflow pilot from Automin
 
 ## Pilot price
 
-The intended pilot price is **₹999 per month**. This is a proposed commercial price, not an active in-app checkout. Paid activation is disabled until a payment provider and server-side verification are implemented. Do not collect a payment by asking a customer to enter a transaction reference into the app.
+The pilot displays a **₹999 / 30-day** manual UPI payment request. The QR only initiates payment and does not verify it or activate access. Customers are instructed to send the UTR through WhatsApp for manual review. The app does not yet include a secure signed activation-code issuer/verifier or server-side subscription enforcement; therefore, do not sell this as an automatically activated subscription or promise remote/device-independent licensing. The pilot does not generate a GST/tax invoice; confirm tax treatment with a qualified accountant before collecting commercial payments.
 
 ## Important limitations
 
@@ -28,7 +28,7 @@ This is a pilot/prototype, not a certified pharmacy billing, accounting, or clin
 - The app does not provide pharmacist identity verification, user roles, audit-grade records, or regulatory compliance certification.
 - Validate medicine stock, batch, expiry, customer balances, and totals before relying on any record.
 - Do not store real prescription or sensitive patient data until a qualified privacy/security review and appropriate safeguards are completed.
-- The current paid checkout is disabled. ₹999/month is not yet purchasable inside the app.
+- The current ₹999 payment flow is a manual contact/verification workflow, not an integrated checkout. Payment does not unlock the app automatically.
 
 ## Local development and checks
 
