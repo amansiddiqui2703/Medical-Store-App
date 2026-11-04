@@ -65,7 +65,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             Store Overview
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Real-time pharmacy counters, chronic care schedule &amp; order fulfillment.
+            Local pharmacy records, refill schedule &amp; order workflow on this device.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -84,6 +84,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>New Order / Rx</span>
           </button>
         </div>
+      </div>
+
+      <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-950">
+        <p className="font-bold">Local-device data safety</p>
+        <p className="mt-1">Records stay in this browser and are not encrypted or synced to the cloud. Export a JSON backup regularly and keep it somewhere secure. Do not enter sensitive patient or prescription information until appropriate privacy and security safeguards have been reviewed.</p>
       </div>
 
       {/* KPI Stat Cards (4 columns) */}
