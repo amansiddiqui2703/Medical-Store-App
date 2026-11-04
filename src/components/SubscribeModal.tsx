@@ -22,7 +22,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   isOpen,
   stores,
   activeStoreId,
-  initialSelectedPlan = 'Annual VIP',
+  initialSelectedPlan = 'Trial',
   onClose,
   onSubmit,
 }) => {
@@ -90,10 +90,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   };
 
   const currentPlanInfo = planDetails[selectedPlan];
-  // Calculate preview-only values in render scope; paid checkout remains disabled.
   const totalAmount: number = selectedPlan === 'Monthly' ? 999 : currentPlanInfo.price;
-  const baseAmount: number = selectedPlan === 'Monthly' ? Math.round((totalAmount / 1.18) * 100) / 100 : currentPlanInfo.price;
-  const gstAmount: number = selectedPlan === 'Monthly' ? Math.round((totalAmount - baseAmount) * 100) / 100 : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,22 +222,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </div>
 
             <div className="space-y-2 border-t md:border-t-0 md:border-l border-slate-200 md:pl-4 pt-3 md:pt-0">
-              <p className="font-semibold text-slate-900">Tax Invoice Summary (GST 18%):</p>
+              <p className="font-semibold text-slate-900">Payment summary:</p>
               <div className="space-y-1 text-slate-600 text-[11px]">
-                <div className="flex justify-between">
-                  <span>Base Software License:</span>
-                  <span className="tabular-nums font-medium">{formatCurrency(baseAmount)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>GST @ 18% (CGST 9% + SGST 9%):</span>
-                  <span className="tabular-nums font-medium">{formatCurrency(gstAmount)}</span>
-                </div>
                 <div className="pt-2 border-t border-slate-300 flex justify-between font-bold text-slate-950 text-xs">
-                  <span>Total Amount Payable:</span>
-                  <span className="tabular-nums text-teal-800 text-sm font-extrabold">
-                    {formatCurrency(totalAmount)}
-                  </span>
+                  <span>Total payable:</span>
+                  <span className="tabular-nums text-teal-800 text-sm font-extrabold">{formatCurrency(totalAmount)}</span>
                 </div>
+                {selectedPlan === 'Monthly' && <p className="pt-2 text-amber-800">This pilot does not generate a tax invoice. Confirm applicable tax treatment with your accountant before payment.</p>}
               </div>
             </div>
           </div>
