@@ -15,6 +15,7 @@ import {
   SubscriptionPlanTier,
 } from './types';
 import { StorageService } from './services/storage';
+import { verifyOfflineLicense } from './utils/offlineLicense';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -106,9 +107,17 @@ export default function App() {
     billingPeriod: 'Monthly' | 'Annual';
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
+    licenseToken?: string;
   }) => {
     try {
-      const { updatedStore, newInvoice } = StorageService.activateSubscription(params);
+      let activationParams = params;
+      if (params.plan === 'Monthly') {
+        const targetStore = stores.find(store => store.id === params.storeId);
+        if (!targetStore || !params.licenseToken) throw new Error('A valid pharmacy and signed license key are required.');
+        const verified = await verifyOfflineLicense(params.licenseToken, targetStore);
+        activationParams = { ...params, transactionRef: verified.utr };
+      }
+      const { updatedStore, newInvoice } = StorageService.activateSubscription(activationParams);
       const updatedStores = stores.map(s => (s.id === updatedStore.id ? updatedStore : s));
       setStores(updatedStores);
       setInvoices([newInvoice, ...invoices]);
