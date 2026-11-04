@@ -122,7 +122,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </div>
             <div>
               <h3 className="font-semibold text-xs sm:text-sm">Automindz SaaS Licensing & Subscription</h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">Activate or extend software license for medical stores</p>
+              <p className="text-[11px] sm:text-xs text-slate-400">Start the local free trial. Paid activation is not available.</p>
             </div>
           </div>
           <button
@@ -137,7 +137,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           {/* Target Store Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Select Medical Store to License / Renew
+              This device's pharmacy workspace
             </label>
             <div className="relative">
               <select
@@ -222,7 +222,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               <p className="font-semibold text-slate-900">Payment summary:</p>
               <div className="space-y-1 text-slate-600 text-[11px]">
                 <div className="pt-2 border-t border-slate-300 flex justify-between font-bold text-slate-950 text-xs">
-                  <span>Total payable:</span>
+                  <span>Proposed price (not payable):</span>
                   <span className="tabular-nums text-teal-800 text-sm font-extrabold">{formatCurrency(totalAmount)}</span>
                 </div>
                 {selectedPlan === 'Monthly' && <p className="pt-2 text-amber-800">No tax invoice or paid checkout is available in this pilot.</p>}
@@ -239,7 +239,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           {selectedPlan !== 'Trial' && selectedPlan !== 'Monthly' && totalAmount > 0 && (
             <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950">
               <p className="font-bold">This plan is not available for purchase</p>
-              <p className="mt-1">Only the ₹999 monthly pilot is currently offered. Annual and Enterprise plans are not available.</p>
+              <p className="mt-1">Only the free local trial is available. Paid plans are not currently offered.</p>
             </div>
           )}
 
