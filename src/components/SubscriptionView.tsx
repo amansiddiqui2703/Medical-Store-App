@@ -76,51 +76,41 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       tier: 'Monthly',
       name: 'Pro Monthly',
       price: 999,
-      period: 'per month + GST',
-      description: 'Full featured automation suite for busy neighbourhood retail chemists.',
-      patientLimit: 'Unlimited Patients',
+      period: 'Proposed price · paid plan unavailable',
+      description: 'Proposed paid tier. Not available until secure licensing and payment verification are implemented.',
+      patientLimit: 'Not confirmed',
       features: [
-        'Unlimited chronic patient profiles',
-        'Automated 9:00 AM WhatsApp refill cron engine',
-        'High-resolution prescription zoom desk',
-        'Udhaar ledger with WhatsApp balance reminders',
-        'Weekly WhatsApp logs & delivery reports',
-        'Local SQLite / Browser automatic sync',
+        'Paid features are not enabled in this pilot',
+        'No automatic WhatsApp sending',
+        'No cloud database or cross-device sync',
+        'No secure paid license activation yet',
       ],
     },
     {
       tier: 'Annual VIP',
       name: 'Annual VIP',
       price: 9999,
-      period: 'per year + GST (Save 20%)',
-      badge: 'RECOMMENDED FOR PHARMACIES',
-      description: 'Best value for high-volume pharmacies. Includes VIP branding & direct API assistance.',
+      period: 'Not available for purchase',
+      badge: 'NOT AVAILABLE',
+      description: 'Future plan only. No annual subscription or support package is currently being sold.',
       patientLimit: 'Unlimited Patients',
       highlighted: true,
       features: [
-        'Everything included in Pro Monthly',
-        'Save ₹1,989 vs monthly renewals (2 months free)',
-        'Custom pharmacy branding on all WhatsApp messages',
-        'Priority Meta WhatsApp Cloud API gateway setup',
-        'Distributor return sheet generator (Print & CSV)',
-        'Priority telephone & remote desk support by Automindz',
+        'Not available in this release',
+        'No automatic messaging or API gateway included',
       ],
     },
     {
       tier: 'Enterprise',
       name: 'Enterprise Multi-Store',
       price: 24999,
-      period: 'per year + GST',
-      badge: 'CHAIN PHARMACIES',
-      description: 'Centralized multi-branch control for pharmacy chains, hospitals & distributors.',
+      period: 'Not available for purchase',
+      badge: 'NOT AVAILABLE',
+      description: 'Future plan only. This release supports one local pharmacy workspace on one device.',
       patientLimit: 'Unlimited across branches',
       features: [
-        'Everything included in Annual VIP',
-        'Connect up to 5 medical store branches',
-        'Centralized dashboard & cross-branch customer transfers',
-        'Multi-counter pharmacist logins & audit logs',
-        'Consolidated vendor purchase & expiry returns desk',
-        'Dedicated onboarding engineer from Automindz Digital Labs',
+        'Not available in this release',
+        'Multi-store and multi-user operation are not supported',
       ],
     },
   ];
@@ -136,9 +126,9 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       'Medical Store',
       'Plan Tier',
       'Invoice Date',
-      'Taxable Base (INR)',
-      'GST 18% (INR)',
-      'Total Paid (INR)',
+      'Recorded Base Amount (INR)',
+      'Recorded Tax Estimate (INR)',
+      'Recorded Total (INR)',
       'Payment Method',
       'Transaction Ref',
       'Status',
@@ -161,7 +151,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       `RefillDesk_Invoices_${new Date().toISOString().slice(0, 10)}.csv`,
       headers,
       rows,
-      'Automindz Digital Labs — RefillDesk SaaS Tax Invoices & Billing Register'
+      'Refill Desk — Local Subscription Records (Not Tax Invoices)'
     );
   };
 
@@ -179,17 +169,17 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Manage software plans, license validity periods, and download official 18% GST tax invoices.
+            View the local pilot status. Paid checkout, secure license activation and tax invoices are not available.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onOpenSubscribeModal('Annual VIP', activeStore?.id)}
+            onClick={() => onOpenSubscribeModal('Trial', activeStore?.id)}
             className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <CreditCard className="w-4 h-4" />
-            <span>Renew / Upgrade License</span>
+            <span>Open Free Trial</span>
           </button>
         </div>
       </div>
@@ -261,7 +251,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
               </div>
 
               <button
-                onClick={() => onOpenSubscribeModal('Annual VIP', activeStore.id)}
+                onClick={() => onOpenSubscribeModal('Trial', activeStore.id)}
                 className="px-3.5 py-1.5 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors cursor-pointer border border-teal-200 shrink-0"
               >
                 Extend Validity
@@ -278,16 +268,13 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
               </span>
             </div>
             <div>
-              <span className="text-slate-500 text-[11px] block">9:00 AM Automated Scan</span>
-              <span className="text-sm font-bold text-emerald-700 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Active</span>
-              </span>
+              <span className="text-slate-500 text-[11px] block">Reminder workflow</span>
+              <span className="text-sm font-bold text-slate-700">Manual scan only</span>
             </div>
             <div>
               <span className="text-slate-500 text-[11px] block">WhatsApp Cloud API</span>
               <span className="text-sm font-bold text-teal-800">
-                {activeStore.whatsappAccessToken ? 'Connected' : 'Click-to-chat ready'}
+                Click-to-chat only
               </span>
             </div>
             <div>
@@ -303,7 +290,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
         <div>
           <h3 className="text-base font-bold text-slate-900">Subscription Plans for Medical Stores</h3>
           <p className="text-xs text-slate-500">
-            Transparent pricing designed for independent retail chemists and pharmacy chains.
+            Only the free local pilot is available today. Paid tiers below are previews, not offers.
           </p>
         </div>
 
@@ -331,12 +318,12 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
                   <div className="mt-4 pb-4 border-b border-slate-200">
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-extrabold text-slate-950 tabular-nums">
-                        {p.price === 0 ? 'Free' : formatCurrency(p.price)}
+                        {p.tier === 'Trial' ? 'Free' : p.tier === 'Monthly' ? '₹999*' : 'Unavailable'}
                       </span>
                     </div>
                     <span className="text-[11px] text-slate-500 block mt-0.5">{p.period}</span>
                     <span className="text-[10px] font-bold text-teal-700 mt-1 block">
-                      Quota: {p.patientLimit}
+                      {p.tier === 'Trial' ? 'Trial guide: 25 cards' : 'Not currently offered'}
                     </span>
                   </div>
 
@@ -353,7 +340,8 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
 
                 <div className="mt-6 pt-4 border-t border-slate-200/80">
                   <button
-                    onClick={() => onOpenSubscribeModal(p.tier, activeStore?.id)}
+                    onClick={() => p.tier === 'Trial' && onOpenSubscribeModal('Trial', activeStore?.id)}
+                    disabled={p.tier !== 'Trial'}
                     className={`w-full py-2.5 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
                       isCurrentStorePlan
                         ? 'bg-slate-100 text-slate-800 hover:bg-slate-200'
@@ -362,7 +350,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
                         : 'bg-slate-900 hover:bg-slate-800 text-white'
                     }`}
                   >
-                    <span>{isCurrentStorePlan ? 'Renew Current Plan' : `Choose ${p.name}`}</span>
+                    <span>{p.tier === 'Trial' ? 'Open Free Trial' : 'Not available'}</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -376,9 +364,9 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Medical Stores Network Licenses</h3>
+            <h3 className="text-base font-bold text-slate-900">Local Workspace Record</h3>
             <p className="text-xs text-slate-500">
-              Track validity dates across all chemist branches connected to your Automindz SaaS account.
+              This local-first pilot supports one workspace only; multi-branch accounts are not enabled.
             </p>
           </div>
         </div>
@@ -455,9 +443,9 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       <div className="space-y-3 pt-4 border-t border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Billing History & GST Tax Invoices</h3>
+            <h3 className="text-base font-bold text-slate-900">Subscription Records</h3>
             <p className="text-xs text-slate-500">
-              Compliant tax invoices with 18% GST (CGST + SGST), SAC Code 998314.
+              These are local subscription records only, not tax invoices or proof of payment.
             </p>
           </div>
 
@@ -492,9 +480,9 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
                   <th className="py-3 px-4">Medical Store</th>
                   <th className="py-3 px-4">Plan</th>
                   <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4 text-right">Taxable (Base)</th>
-                  <th className="py-3 px-4 text-right">GST (18%)</th>
-                  <th className="py-3 px-4 text-right">Total Paid</th>
+                  <th className="py-3 px-4 text-right">Recorded Base</th>
+                  <th className="py-3 px-4 text-right">Tax Estimate</th>
+                  <th className="py-3 px-4 text-right">Recorded Total</th>
                   <th className="py-3 px-4">Payment Ref</th>
                   <th className="py-3 px-4 text-right">Invoice</th>
                 </tr>
@@ -544,7 +532,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
                           className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 transition-colors cursor-pointer"
                         >
                           <FileText className="w-3.5 h-3.5" />
-                          <span>View Invoice</span>
+                          <span>View Record</span>
                         </button>
                       </td>
                     </tr>
