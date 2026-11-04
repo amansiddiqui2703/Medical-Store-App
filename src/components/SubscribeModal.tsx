@@ -54,10 +54,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       billingPeriod: 'Monthly',
       cadenceText: '₹999 / month + GST',
       features: [
-        'Unlimited chronic patients',
-        '9:00 AM Automated WhatsApp cron reminders',
-        'Prescription zoom desk & verification',
-        'Udhaar ledger with WhatsApp balance reminders',
+        'Customer and refill records on this device',
+        'Medicine stock and batch tracking',
+        'Orders, completed sales and receipt printing',
+        'Udhaar ledger and transaction history',
+        'Local JSON backup and restore',
+        'Manual reminder drafts (WhatsApp is not auto-sent)',
+        'Single-device local storage; no cloud sync',
       ],
     },
     'Annual VIP': {
@@ -67,12 +70,9 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       cadenceText: '₹9,999 / year + GST',
       highlight: 'RECOMMENDED · SAVE 20%',
       features: [
-        'Everything in Pro Monthly',
-        'Save ₹1,989 vs monthly renewals',
-        'Custom store branding on WhatsApp messages',
-        'Priority Meta WhatsApp Cloud API gateway setup',
-        'Distributor return sheet generator (CSV & Print)',
-        'Dedicated account manager support by Automindz',
+        'Not available in the current pilot release',
+        'Annual billing and add-on services are not being sold yet',
+        'Choose the monthly pilot only after reviewing the live demo',
       ],
     },
     'Enterprise': {
@@ -82,11 +82,9 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       cadenceText: '₹24,999 / year + GST',
       highlight: 'MULTI-BRANCH CHAINS',
       features: [
-        'Everything in Annual VIP',
-        'Up to 5 pharmacy branches supported',
-        'Multi-counter pharmacist logins',
-        'Consolidated stock expiry return coordinator',
-        'Custom ERP / billing software integration assist',
+        'Not available in the current pilot release',
+        'Multi-user accounts and multi-device sync are not included',
+        'Do not purchase this tier; contact the developer for future availability',
       ],
     },
   };
