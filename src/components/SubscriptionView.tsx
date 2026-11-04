@@ -62,7 +62,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       tier: 'Trial',
       name: 'Free Trial',
       price: 0,
-      period: '14-day evaluation',
+      period: '14-day trial period shown in the app',
       description: 'Ideal for newly onboarded pharmacy stores testing digital refill reminders.',
       patientLimit: '25 Patients max',
       features: [
@@ -93,7 +93,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       period: 'Not available for purchase',
       badge: 'NOT AVAILABLE',
       description: 'Future plan only. No annual subscription or support package is currently being sold.',
-      patientLimit: 'Unlimited Patients',
+      patientLimit: 'Not confirmed',
       highlighted: true,
       features: [
         'Not available in this release',
@@ -107,7 +107,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
       period: 'Not available for purchase',
       badge: 'NOT AVAILABLE',
       description: 'Future plan only. This release supports one local pharmacy workspace on one device.',
-      patientLimit: 'Unlimited across branches',
+      patientLimit: 'Not available',
       features: [
         'Not available in this release',
         'Multi-store and multi-user operation are not supported',
