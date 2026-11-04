@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "M.S. Medical Store",
-  "short_name": "MS Medical",
-  "description": "Medical store inventory and management",
+  "name": "Refill Desk",
+  "short_name": "Refill Desk",
+  "description": "Refill Desk — inventory and management for M.S. Medical Store, Una, Gujarat.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
