@@ -97,8 +97,15 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (selectedPlan === 'Monthly') {
+      const storeName = stores.find(store => store.id === selectedStoreId)?.name || 'My medical store';
+      const message = 'Hello Aman, I want to activate the Refill Desk monthly subscription for ' + storeName + '. I will pay ₹999 and share my UPI UTR after payment. Please verify and provide my 30-day activation code.';
+      window.open('https://wa.me/918160146636?text=' + encodeURIComponent(message), '_blank', 'noopener,noreferrer');
+      window.alert('WhatsApp is opening. Complete the ₹999 UPI payment using the QR, then send your UTR / transaction ID. Your subscription is not active until payment is verified and a valid activation code is issued.');
+      return;
+    }
     if (selectedPlan !== 'Trial') {
-      window.alert('Paid-plan checkout is not connected to a verified payment gateway yet. No payment has been taken. Please use the free trial for now.');
+      window.alert('This plan is not available for purchase.');
       return;
     }
     onSubmit({
