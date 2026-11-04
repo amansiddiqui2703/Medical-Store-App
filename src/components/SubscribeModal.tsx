@@ -52,7 +52,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       name: 'Pro Monthly',
       price: 999,
       billingPeriod: 'Monthly',
-      cadenceText: '₹999 / month + GST',
+      cadenceText: '₹999 / month (total payable)',
       features: [
         'Customer and refill records on this device',
         'Medicine stock and batch tracking',
@@ -67,7 +67,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       name: 'Annual VIP',
       price: 9999,
       billingPeriod: 'Annual',
-      cadenceText: '₹9,999 / year + GST',
+      cadenceText: 'Not for sale',
       highlight: 'RECOMMENDED · SAVE 20%',
       features: [
         'Not available in the current pilot release',
@@ -79,7 +79,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       name: 'Enterprise Multi-Store',
       price: 24999,
       billingPeriod: 'Annual',
-      cadenceText: '₹24,999 / year + GST',
+      cadenceText: 'Not for sale',
       highlight: 'MULTI-BRANCH CHAINS',
       features: [
         'Not available in the current pilot release',
@@ -92,8 +92,8 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const currentPlanInfo = planDetails[selectedPlan];
   // Calculate preview-only values in render scope; paid checkout remains disabled.
   const baseAmount: number = currentPlanInfo.price;
-  const gstAmount: number = Math.round(baseAmount * 0.18 * 100) / 100;
-  const totalAmount: number = Math.round((baseAmount + gstAmount) * 100) / 100;
+  const totalAmount: number = selectedPlan === 'Monthly' ? 999 : baseAmount;
+  const gstAmount: number = selectedPlan === 'Monthly' ? Math.round((totalAmount - totalAmount / 1.18) * 100) / 100 : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,10 +238,33 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </div>
           </div>
 
-          {totalAmount > 0 && (
+          {selectedPlan === 'Monthly' && (
+            <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 text-xs text-slate-800">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="shrink-0 rounded-xl bg-white p-2 border border-slate-200">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent('upi://pay?pa=amanriyazsiddiqui.12@oksbi&pn=Aman%20Siddiqui&am=999&cu=INR&tn=Refill%20Desk%20Monthly%20Subscription')}`}
+                    alt="UPI payment QR for ₹999 to Aman Siddiqui"
+                    width="190"
+                    height="190"
+                    className="w-44 h-44"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-slate-900 text-sm">Pay ₹999 for 30 days</p>
+                  <p className="mt-1">Scan this QR using any UPI app. Confirm the recipient is <strong>Aman Siddiqui</strong> and the amount is <strong>₹999</strong> before paying.</p>
+                  <p className="mt-2 font-semibold">UPI ID</p>
+                  <p className="break-all rounded-md bg-white border border-teal-200 px-2 py-1 font-mono select-all">amanriyazsiddiqui.12@oksbi</p>
+                  <p className="mt-2 text-slate-600">After payment, send the UPI UTR / transaction ID to the administrator for manual verification. Access must only be enabled after the payment is verified.</p>
+                </div>
+              </div>
+              <p className="mt-3 border-t border-teal-200 pt-2 text-[11px] text-amber-800">This QR only initiates a UPI payment. It does not verify payment or activate a subscription automatically. Manual approval and secure cross-device licensing still need a server-side license service.</p>
+            </div>
+          )}
+          {selectedPlan !== 'Monthly' && totalAmount > 0 && (
             <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950">
-              <p className="font-bold">Paid checkout is not available yet</p>
-              <p className="mt-1">No verified payment gateway is connected. Do not transfer money using placeholder details. Paid plans cannot be activated from this screen; the free trial remains available.</p>
+              <p className="font-bold">This plan is not available for purchase</p>
+              <p className="mt-1">Only the ₹999 monthly pilot is currently offered. Annual and Enterprise plans are not available.</p>
             </div>
           )}
 
@@ -249,7 +272,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
               <ShieldCheck className="w-4 h-4 text-teal-700" />
-              <span>Free trial only until secure checkout is configured</span>
+              <span>UPI QR · manual payment verification</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -264,7 +287,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                 disabled={selectedPlan !== 'Trial'}
                 className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
-                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Paid checkout unavailable'}
+                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Pay by QR; request manual approval'}
               </button>
             </div>
           </div>
