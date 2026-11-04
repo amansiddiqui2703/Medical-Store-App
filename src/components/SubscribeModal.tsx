@@ -15,6 +15,7 @@ interface SubscribeModalProps {
     billingPeriod: 'Monthly' | 'Annual';
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
+    licenseToken?: string;
   }) => void;
 }
 
@@ -29,11 +30,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const [selectedStoreId, setSelectedStoreId] = useState<string>(activeStoreId || (stores[0]?.id || ''));
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanTier>(initialSelectedPlan);
   const [paymentMethod] = useState<'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer'>('UPI');
+  const [licenseToken, setLicenseToken] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setSelectedStoreId(activeStoreId || stores[0]?.id || '');
       setSelectedPlan(initialSelectedPlan);
+      setLicenseToken('');
     }
   }, [isOpen, activeStoreId, initialSelectedPlan, stores]);
 
@@ -59,7 +62,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       name: 'Pro Monthly',
       price: 999,
       billingPeriod: 'Monthly',
-      cadenceText: 'Proposed ₹999 / 30 days · not available yet',
+      cadenceText: '₹999 / 30 days · manual UTR verification',
       features: [
         'Customer and refill records on this device',
         'Medicine stock and batch tracking',
@@ -102,7 +105,11 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedPlan === 'Monthly') {
-      window.alert('Paid subscriptions are temporarily unavailable. Please use the free trial. No payment should be made until secure license activation is ready.');
+      if (!licenseToken.trim()) {
+        window.alert('Enter the 30-day license key supplied by Automindz after payment verification.');
+        return;
+      }
+      onSubmit({ storeId: selectedStoreId, plan: 'Monthly', billingPeriod: 'Monthly', paymentMethod, transactionRef: 'OFFLINE-LICENSE', licenseToken: licenseToken.trim() });
       return;
     }
     if (selectedPlan !== 'Trial') {
@@ -129,7 +136,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </div>
             <div>
               <h3 className="font-semibold text-xs sm:text-sm">Automindz SaaS Licensing & Subscription</h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">Start the local free trial. Paid activation is not available.</p>
+              <p className="text-[11px] sm:text-xs text-slate-400">Free trial or activate a verified offline license key.</p>
             </div>
           </div>
           <button
@@ -229,18 +236,19 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               <p className="font-semibold text-slate-900">Payment summary:</p>
               <div className="space-y-1 text-slate-600 text-[11px]">
                 <div className="pt-2 border-t border-slate-300 flex justify-between font-bold text-slate-950 text-xs">
-                  <span>Proposed price (not payable):</span>
+                  <span>Plan price:</span>
                   <span className="tabular-nums text-teal-800 text-sm font-extrabold">{formatCurrency(totalAmount)}</span>
                 </div>
-                {selectedPlan === 'Monthly' && <p className="pt-2 text-amber-800">No tax invoice or paid checkout is available in this pilot.</p>}
+                {selectedPlan === 'Monthly' && <p className="pt-2 text-amber-800">Pay only after confirming the payment details with Automindz. This is not a GST invoice.</p>}
               </div>
             </div>
           </div>
 
           {selectedPlan === 'Monthly' && (
-            <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950">
-              <p className="font-bold">Paid activation is not ready yet</p>
-              <p className="mt-1">₹999 / 30 days is the proposed pilot price only. Do not transfer money yet. Secure license issuing, activation and payment verification must be completed before paid subscriptions are opened.</p>
+            <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 text-xs text-teal-950 space-y-2">
+              <p className="font-bold">Activate with your 30-day license key</p>
+              <p>After paying ₹999 and sharing your UTR with Automindz, enter the signed license key you receive. The key is bound to this pharmacy's name, phone and drug license number.</p>
+              <textarea value={licenseToken} onChange={e => setLicenseToken(e.target.value)} rows={3} placeholder="Paste your signed license key here" className="w-full rounded-lg border border-teal-300 bg-white p-2 font-mono text-[11px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600" />
             </div>
           )}
           {selectedPlan !== 'Trial' && selectedPlan !== 'Monthly' && totalAmount > 0 && (
@@ -254,7 +262,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
               <ShieldCheck className="w-4 h-4 text-teal-700" />
-              <span>Paid checkout unavailable · trial only</span>
+              <span>Offline signed license · 30-day validity</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -266,10 +274,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={selectedPlan !== 'Trial'}
+                disabled={selectedPlan !== 'Trial' && (selectedPlan !== 'Monthly' || !licenseToken.trim())}
                 className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
-                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Plan unavailable'}
+                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : selectedPlan === 'Monthly' ? 'Verify & Activate License' : 'Plan unavailable'}
               </button>
             </div>
           </div>
