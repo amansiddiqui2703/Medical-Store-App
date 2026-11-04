@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Check, CreditCard, ShieldCheck } from 'lucide-react';
 import { SubscriptionPlanTier, MedicalStore } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -29,6 +29,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const [selectedStoreId, setSelectedStoreId] = useState<string>(activeStoreId || (stores[0]?.id || ''));
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanTier>(initialSelectedPlan);
   const [paymentMethod] = useState<'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer'>('UPI');
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedStoreId(activeStoreId || stores[0]?.id || '');
+      setSelectedPlan(initialSelectedPlan);
+    }
+  }, [isOpen, activeStoreId, initialSelectedPlan, stores]);
 
   if (!isOpen) return null;
 
