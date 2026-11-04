@@ -62,7 +62,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       name: 'Pro Monthly',
       price: 999,
       billingPeriod: 'Monthly',
-      cadenceText: '₹999 / 30 days · manual UTR verification',
+      cadenceText: 'Coming soon · secure approval is being built',
       features: [
         'Customer and refill records on this device',
         'Medicine stock and batch tracking',
@@ -104,16 +104,8 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedPlan === 'Monthly') {
-      if (!licenseToken.trim()) {
-        window.alert('Enter the 30-day license key supplied by Automindz after payment verification.');
-        return;
-      }
-      onSubmit({ storeId: selectedStoreId, plan: 'Monthly', billingPeriod: 'Monthly', paymentMethod, transactionRef: 'OFFLINE-LICENSE', licenseToken: licenseToken.trim() });
-      return;
-    }
     if (selectedPlan !== 'Trial') {
-      window.alert('This plan is not available for purchase.');
+      window.alert('Paid activation is temporarily unavailable. Do not send payment yet.');
       return;
     }
     onSubmit({
@@ -136,7 +128,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </div>
             <div>
               <h3 className="font-semibold text-xs sm:text-sm">Automindz SaaS Licensing & Subscription</h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">Free trial or activate a verified offline license key.</p>
+              <p className="text-[11px] sm:text-xs text-slate-400">Free trial · paid subscriptions temporarily paused.</p>
             </div>
           </div>
           <button
@@ -245,10 +237,9 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           </div>
 
           {selectedPlan === 'Monthly' && (
-            <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 text-xs text-teal-950 space-y-2">
-              <p className="font-bold">Activate with your 30-day license key</p>
-              <p>Pay ₹999 by UPI to <strong className="font-mono">amanriyazsiddiqui.12@oksbi</strong>. After you share the UTR and payment is manually verified, Automindz will send a signed 30-day license key. The key is bound to the pharmacy name, phone and drug license number saved in Settings.</p>
-              <textarea value={licenseToken} onChange={e => setLicenseToken(e.target.value)} rows={3} placeholder="Paste your signed license key here" className="w-full rounded-lg border border-teal-300 bg-white p-2 font-mono text-[11px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600" />
+            <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950 space-y-1">
+              <p className="font-bold">Paid subscriptions are temporarily paused</p>
+              <p>We are building secure server-side payment verification and owner-only approval. Do not transfer money or share a UTR until this notice is removed.</p>
             </div>
           )}
           {selectedPlan !== 'Trial' && selectedPlan !== 'Monthly' && totalAmount > 0 && (
@@ -262,7 +253,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
               <ShieldCheck className="w-4 h-4 text-teal-700" />
-              <span>Offline signed license · 30-day validity</span>
+              <span>Paid activation paused · no payment accepted</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -274,10 +265,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={selectedPlan !== 'Trial' && (selectedPlan !== 'Monthly' || !licenseToken.trim())}
+                disabled={selectedPlan !== 'Trial'}
                 className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
-                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : selectedPlan === 'Monthly' ? 'Verify & Activate License' : 'Plan unavailable'}
+                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Paid plan unavailable'}
               </button>
             </div>
           </div>
