@@ -114,7 +114,7 @@ export default function App() {
       if (params.plan === 'Monthly') {
         const targetStore = stores.find(store => store.id === params.storeId);
         if (!targetStore || !params.licenseToken) throw new Error('A valid pharmacy and signed license key are required.');
-        const verified = await verifyOfflineLicense(params.licenseToken, targetStore);
+        const verified = await verifyOfflineLicense(params.licenseToken, { name: settings.storeName, phone: settings.phone, licenseNumber: settings.licenseNumber });
         activationParams = { ...params, transactionRef: verified.utr };
       }
       const { updatedStore, newInvoice } = StorageService.activateSubscription(activationParams);
