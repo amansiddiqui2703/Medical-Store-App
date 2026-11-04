@@ -248,8 +248,11 @@ export class StorageService {
     paymentMethod: 'UPI' | 'NetBanking' | 'Card' | 'Cash/Bank Transfer';
     transactionRef: string;
   }): { updatedStore: MedicalStore; newInvoice: SubscriptionInvoice } {
-    // Monthly paid activation is permitted only after App.tsx verifies an Automindz Ed25519 license.
-    // This local method is not a server-side payment verifier and does not create tax invoices.
+    // This local-only storage layer may activate trials only. Paid subscriptions require
+    // server-side payment verification and owner approval, neither of which exists yet.
+    if (params.plan !== 'Trial') {
+      throw new Error('Paid activation is disabled until secure server-side approval is available.');
+    }
     const stores = this.getStores();
     const store = stores.find(s => s.id === params.storeId);
     if (!store) {
