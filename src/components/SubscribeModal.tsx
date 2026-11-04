@@ -247,7 +247,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           {selectedPlan === 'Monthly' && (
             <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 text-xs text-teal-950 space-y-2">
               <p className="font-bold">Activate with your 30-day license key</p>
-              <p>After paying ₹999 and sharing your UTR with Automindz, enter the signed license key you receive. The key is bound to this pharmacy's name, phone and drug license number.</p>
+              <p>Pay ₹999 by UPI to <strong className="font-mono">amanriyazsiddiqui.12@oksbi</strong>. After you share the UTR and payment is manually verified, Automindz will send a signed 30-day license key. The key is bound to the pharmacy name, phone and drug license number saved in Settings.</p>
               <textarea value={licenseToken} onChange={e => setLicenseToken(e.target.value)} rows={3} placeholder="Paste your signed license key here" className="w-full rounded-lg border border-teal-300 bg-white p-2 font-mono text-[11px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600" />
             </div>
           )}
