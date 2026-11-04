@@ -199,7 +199,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition-colors cursor-pointer ml-auto"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset to Demo Data</span>
+                <span>Clear All Local Records</span>
               </button>
             </div>
           </div>
