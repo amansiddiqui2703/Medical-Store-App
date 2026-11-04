@@ -15,7 +15,7 @@ Refill Desk is a single-device, local-first pharmacy workflow pilot from Automin
 
 ## Pilot price
 
-The proposed future paid plan is **₹999 / 30 days**, but paid subscriptions are currently unavailable and the app does not request or accept payment. Do not transfer money or advertise paid activation yet. A secure signed license issuer/verifier and server-side payment verification must be completed and tested before paid plans are enabled. The pilot does not generate a GST/tax invoice; confirm tax treatment with a qualified accountant before any commercial launch.
+The Pro Monthly plan is **₹999 / 30 days**. Payment is by direct UPI and is manually verified against the UTR. After verification, the operator uses a separate private offline license-issuer HTML file to create an Ed25519-signed 30-day key. The app verifies the signature with an embedded public key and binds the license to the pharmacy name, phone and drug license number in Settings. Keep the issuer file private: anyone who obtains it can issue licenses. This offline model has no remote revocation, centralized subscription registry, device synchronization, or reliable protection against a user changing their device clock. The key can be entered on another device with the same pharmacy profile, but business records remain local to each device. This is not a GST/tax invoice; confirm tax treatment with a qualified accountant before commercial use. The pilot does not generate a GST/tax invoice; confirm tax treatment with a qualified accountant before any commercial launch.
 
 ## Important limitations
 
@@ -28,7 +28,7 @@ This is a pilot/prototype, not a certified pharmacy billing, accounting, or clin
 - The app does not provide pharmacist identity verification, user roles, audit-grade records, or regulatory compliance certification.
 - Validate medicine stock, batch, expiry, customer balances, and totals before relying on any record.
 - Do not store real prescription or sensitive patient data until a qualified privacy/security review and appropriate safeguards are completed.
-- Paid checkout and subscription activation are disabled. Do not collect payments for this build.
+- Paid activation is based on a manually issued offline license. It does not verify bank payments automatically, sync data between devices, or support remote license revocation.
 
 ## Local development and checks
 
