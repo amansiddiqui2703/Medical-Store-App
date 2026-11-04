@@ -264,7 +264,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
             <div>
               <span className="text-slate-500 text-[11px] block">Chronic Patient Cards</span>
               <span className="text-sm font-bold text-slate-900 tabular-nums">
-                {customersCount} / {activeStore.plan === 'Trial' ? '25' : 'Unlimited'}
+                {customersCount} · locally stored
               </span>
             </div>
             <div>
@@ -272,7 +272,7 @@ export const SubscriptionView: React.FC<SubscriptionViewProps> = ({
               <span className="text-sm font-bold text-slate-700">Manual scan only</span>
             </div>
             <div>
-              <span className="text-slate-500 text-[11px] block">WhatsApp Cloud API</span>
+              <span className="text-slate-500 text-[11px] block">WhatsApp capability</span>
               <span className="text-sm font-bold text-teal-800">
                 Click-to-chat only
               </span>
