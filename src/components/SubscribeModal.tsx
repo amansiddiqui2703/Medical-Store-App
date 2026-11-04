@@ -255,7 +255,16 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                   <p className="mt-1">Scan this QR using any UPI app. Confirm the recipient is <strong>Aman Siddiqui</strong> and the amount is <strong>₹999</strong> before paying.</p>
                   <p className="mt-2 font-semibold">UPI ID</p>
                   <p className="break-all rounded-md bg-white border border-teal-200 px-2 py-1 font-mono select-all">amanriyazsiddiqui.12@oksbi</p>
-                  <p className="mt-2 text-slate-600">After payment, send the UPI UTR / transaction ID to the administrator for manual verification. Access must only be enabled after the payment is verified.</p>
+                  <p className="mt-2 text-slate-600">After payment, send the UPI UTR / transaction ID to Aman Siddiqui on WhatsApp for manual verification. Access is enabled only after payment is verified.</p>
+                  <a
+                    href={`https://wa.me/918160146636?text=${encodeURIComponent('Hello Aman, I have paid ₹999 for the Refill Desk monthly subscription. My medical store name is: ____. My UPI UTR / transaction ID is: ____. Please verify my payment and activate my subscription.')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex mt-3 items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700"
+                  >
+                    Send payment details on WhatsApp
+                  </a>
+                  <p className="mt-1 text-[11px] text-slate-600">WhatsApp: +91 81601 46636 · Manual verification required</p>
                 </div>
               </div>
               <p className="mt-3 border-t border-teal-200 pt-2 text-[11px] text-amber-800">This QR only initiates a UPI payment. It does not verify payment or activate a subscription automatically. Manual approval and secure cross-device licensing still need a server-side license service.</p>
