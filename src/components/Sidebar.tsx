@@ -42,12 +42,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <LayoutDashboard className="w-4 h-4" />,
     },
     {
-      id: 'network',
-      label: 'Stores Network',
-      icon: <Building2 className="w-4 h-4" />,
-      badgeCount: storesCount,
-    },
-    {
       id: 'refill',
       label: 'Refill Due',
       icon: <Clock className="w-4 h-4" />,
@@ -141,10 +135,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs">
           <div className="flex items-center gap-1.5 font-semibold text-slate-900 mb-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
-            <span>Automated 9 AM Scan</span>
+            <span>Manual Reminder Scan</span>
           </div>
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            Checks all chronic patients due in 3 days. Ready for click-to-chat or Meta Cloud API.
+            Prepares a local list of due customers. Messages are not sent automatically.
           </p>
         </div>
 
@@ -154,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span>Automindz Digital Labs</span>
           </div>
           <p className="text-[10px] text-teal-700">
-            Medical store operating system · Production Edition
+            Single-device local-first pilot
           </p>
         </div>
       </div>
