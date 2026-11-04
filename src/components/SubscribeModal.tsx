@@ -91,9 +91,9 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
   const currentPlanInfo = planDetails[selectedPlan];
   // Calculate preview-only values in render scope; paid checkout remains disabled.
-  const baseAmount: number = currentPlanInfo.price;
-  const totalAmount: number = selectedPlan === 'Monthly' ? 999 : baseAmount;
-  const gstAmount: number = selectedPlan === 'Monthly' ? Math.round((totalAmount - totalAmount / 1.18) * 100) / 100 : 0;
+  const totalAmount: number = selectedPlan === 'Monthly' ? 999 : currentPlanInfo.price;
+  const baseAmount: number = selectedPlan === 'Monthly' ? Math.round((totalAmount / 1.18) * 100) / 100 : currentPlanInfo.price;
+  const gstAmount: number = selectedPlan === 'Monthly' ? Math.round((totalAmount - baseAmount) * 100) / 100 : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,10 +284,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={selectedPlan !== 'Trial'}
+                disabled={selectedPlan !== 'Trial' && selectedPlan !== 'Monthly'}
                 className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
-                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Pay by QR; request manual approval'}
+                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : selectedPlan === 'Monthly' ? 'I have paid — show approval steps' : 'Plan unavailable'}
               </button>
             </div>
           </div>
