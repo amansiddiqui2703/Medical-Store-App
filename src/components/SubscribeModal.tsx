@@ -52,7 +52,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       name: 'Pro Monthly',
       price: 999,
       billingPeriod: 'Monthly',
-      cadenceText: '₹999 / month (total payable)',
+      cadenceText: 'Proposed ₹999 / 30 days · not available yet',
       features: [
         'Customer and refill records on this device',
         'Medicine stock and batch tracking',
@@ -68,7 +68,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       price: 9999,
       billingPeriod: 'Annual',
       cadenceText: 'Not for sale',
-      highlight: 'RECOMMENDED · SAVE 20%',
+      highlight: 'NOT AVAILABLE',
       features: [
         'Not available in the current pilot release',
         'Annual billing and add-on services are not being sold yet',
@@ -80,7 +80,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       price: 24999,
       billingPeriod: 'Annual',
       cadenceText: 'Not for sale',
-      highlight: 'MULTI-BRANCH CHAINS',
+      highlight: 'NOT AVAILABLE',
       features: [
         'Not available in the current pilot release',
         'Multi-user accounts and multi-device sync are not included',
@@ -95,10 +95,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedPlan === 'Monthly') {
-      const storeName = stores.find(store => store.id === selectedStoreId)?.name || 'My medical store';
-      const message = 'Hello Aman, I want to activate the Refill Desk monthly subscription for ' + storeName + '. I will pay ₹999 and share my UPI UTR after payment. Please verify and provide my 30-day activation code.';
-      window.open('https://wa.me/918160146636?text=' + encodeURIComponent(message), '_blank', 'noopener,noreferrer');
-      window.alert('WhatsApp is opening. Complete the ₹999 UPI payment using the QR, then send your UTR / transaction ID. Your subscription is not active until payment is verified and a valid activation code is issued.');
+      window.alert('Paid subscriptions are temporarily unavailable. Please use the free trial. No payment should be made until secure license activation is ready.');
       return;
     }
     if (selectedPlan !== 'Trial') {
@@ -228,44 +225,18 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                   <span>Total payable:</span>
                   <span className="tabular-nums text-teal-800 text-sm font-extrabold">{formatCurrency(totalAmount)}</span>
                 </div>
-                {selectedPlan === 'Monthly' && <p className="pt-2 text-amber-800">This pilot does not generate a tax invoice. Confirm applicable tax treatment with your accountant before payment.</p>}
+                {selectedPlan === 'Monthly' && <p className="pt-2 text-amber-800">No tax invoice or paid checkout is available in this pilot.</p>}
               </div>
             </div>
           </div>
 
           {selectedPlan === 'Monthly' && (
-            <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 text-xs text-slate-800">
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <div className="shrink-0 rounded-xl bg-white p-2 border border-slate-200">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent('upi://pay?pa=amanriyazsiddiqui.12@oksbi&pn=Aman%20Siddiqui&am=999&cu=INR&tn=Refill%20Desk%20Monthly%20Subscription')}`}
-                    alt="UPI payment QR for ₹999 to Aman Siddiqui"
-                    width="190"
-                    height="190"
-                    className="w-44 h-44"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-slate-900 text-sm">Pay ₹999 for 30 days</p>
-                  <p className="mt-1">Scan this QR using any UPI app. Confirm the recipient is <strong>Aman Siddiqui</strong> and the amount is <strong>₹999</strong> before paying.</p>
-                  <p className="mt-2 font-semibold">UPI ID</p>
-                  <p className="break-all rounded-md bg-white border border-teal-200 px-2 py-1 font-mono select-all">amanriyazsiddiqui.12@oksbi</p>
-                  <p className="mt-2 text-slate-600">After payment, send the UPI UTR / transaction ID to Aman Siddiqui on WhatsApp for manual verification. Access is enabled only after payment is verified.</p>
-                  <a
-                    href={`https://wa.me/918160146636?text=${encodeURIComponent('Hello Aman, I have paid ₹999 for the Refill Desk monthly subscription. My medical store name is: ____. My UPI UTR / transaction ID is: ____. Please verify my payment and activate my subscription.')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex mt-3 items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700"
-                  >
-                    Send payment details on WhatsApp
-                  </a>
-                  <p className="mt-1 text-[11px] text-slate-600">WhatsApp: +91 81601 46636 · Manual verification required</p>
-                </div>
-              </div>
-              <p className="mt-3 border-t border-teal-200 pt-2 text-[11px] text-amber-800">This QR only initiates a UPI payment. It does not verify payment or activate a subscription automatically. Manual approval and secure cross-device licensing still need a server-side license service.</p>
+            <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950">
+              <p className="font-bold">Paid activation is not ready yet</p>
+              <p className="mt-1">₹999 / 30 days is the proposed pilot price only. Do not transfer money yet. Secure license issuing, activation and payment verification must be completed before paid subscriptions are opened.</p>
             </div>
           )}
-          {selectedPlan !== 'Monthly' && totalAmount > 0 && (
+          {selectedPlan !== 'Trial' && selectedPlan !== 'Monthly' && totalAmount > 0 && (
             <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950">
               <p className="font-bold">This plan is not available for purchase</p>
               <p className="mt-1">Only the ₹999 monthly pilot is currently offered. Annual and Enterprise plans are not available.</p>
@@ -276,7 +247,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
               <ShieldCheck className="w-4 h-4 text-teal-700" />
-              <span>UPI QR · manual payment verification</span>
+              <span>Paid checkout unavailable · trial only</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -288,10 +259,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={selectedPlan !== 'Trial' && selectedPlan !== 'Monthly'}
+                disabled={selectedPlan !== 'Trial'}
                 className="px-5 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
-                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : selectedPlan === 'Monthly' ? 'I have paid — show approval steps' : 'Plan unavailable'}
+                {selectedPlan === 'Trial' ? 'Activate 14-Day Trial' : 'Plan unavailable'}
               </button>
             </div>
           </div>
